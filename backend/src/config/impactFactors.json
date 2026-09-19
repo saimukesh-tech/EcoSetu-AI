@@ -1,0 +1,23 @@
+{
+  "co2eAvoidedKgPerKg": {
+    "food_waste": 2.50,
+    "plastic": 1.80,
+    "paper": 1.20,
+    "glass": 0.35,
+    "metal": 4.50,
+    "textiles": 3.20,
+    "flower_waste": 0.80,
+    "fabric_waste": 2.90,
+    "general": 1.50
+  },
+  "mealsRescuedPerKgFoodWaste": 2.0,
+  "treesEquivalentPer100KgCO2": 4.5,
+  "sources": {
+    "food_waste": "EPA WARM (Waste Reduction Model) v15 / IPCC Guidelines",
+    "plastic": "Association of Plastic Recyclers (APR) LCI Study",
+    "paper": "Environmental Paper Network Paper Calculator v4.0",
+    "glass": "Glass Packaging Institute Recycling LCA",
+    "metal": "International Aluminium Institute LCA",
+    "textiles": "WRAP Textile Recovery Impact Assessment"
+  }
+}

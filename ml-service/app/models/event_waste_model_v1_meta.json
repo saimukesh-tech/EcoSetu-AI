@@ -1,0 +1,45 @@
+{
+  "modelName": "event-waste-model",
+  "version": "v1",
+  "algorithm": "RandomForestRegressor",
+  "features": {
+    "categorical": [
+      "Type of Food",
+      "Event Type",
+      "Storage Conditions",
+      "Purchase History",
+      "Seasonality",
+      "Preparation Method",
+      "Geographical Location",
+      "Pricing"
+    ],
+    "numerical": [
+      "Number of Guests",
+      "Quantity of Food"
+    ]
+  },
+  "metrics": {
+    "MAE": 1.6663017540349472,
+    "RMSE": 2.8097604169177646,
+    "R2": 0.9238383009334659
+  },
+  "allModelResults": {
+    "RandomForestRegressor": {
+      "MAE": 1.6663017540349472,
+      "RMSE": 2.8097604169177646,
+      "R2": 0.9238383009334659
+    },
+    "GradientBoostingRegressor": {
+      "MAE": 2.3512916695387367,
+      "RMSE": 3.099974443011982,
+      "R2": 0.9072926278585406
+    },
+    "RidgeRegression": {
+      "MAE": 3.914691546228652,
+      "RMSE": 5.024559820061752,
+      "R2": 0.7564466619490239
+    }
+  },
+  "trainingRecords": 1782,
+  "targetVariable": "Wastage Food Amount"
+}

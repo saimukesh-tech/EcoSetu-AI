@@ -1,0 +1,83 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Users ──────────────────────────────────────────────────────────────
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+      // Allow user to create their own profile
+      allow create: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // ── Events ─────────────────────────────────────────────────────────────
+    match /events/{eventId} {
+      allow create: if request.auth != null
+        && request.resource.data.organizerUid == request.auth.uid;
+      allow read, update, delete: if request.auth != null
+        && resource.data.organizerUid == request.auth.uid;
+    }
+
+    // ── Waste Predictions ──────────────────────────────────────────────────
+    match /waste_predictions/{predId} {
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid;
+      allow read: if request.auth != null
+        && resource.data.uid == request.auth.uid;
+    }
+
+    // ── Recovery Partners ──────────────────────────────────────────────────
+    match /recovery_partners/{partnerId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == partnerId;
+    }
+
+    // ── Pickup Requests ────────────────────────────────────────────────────
+    match /pickup_requests/{reqId} {
+      allow create: if request.auth != null
+        && request.resource.data.organizerUid == request.auth.uid;
+      allow read, update: if request.auth != null && (
+        resource.data.organizerUid == request.auth.uid ||
+        resource.data.partnerUid == request.auth.uid
+      );
+      allow delete: if request.auth != null
+        && resource.data.organizerUid == request.auth.uid;
+    }
+
+    // ── Pickup Status History ──────────────────────────────────────────────
+    match /pickup_status_history/{histId} {
+      allow create: if request.auth != null;
+      allow read: if request.auth != null;
+    }
+
+    // ── Impact Records ─────────────────────────────────────────────────────
+    match /impact_records/{recId} {
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid;
+      allow read: if request.auth != null
+        && resource.data.uid == request.auth.uid;
+    }
+
+    // ── Notifications ──────────────────────────────────────────────────────
+    match /notifications/{notifId} {
+      allow read, update: if request.auth != null
+        && resource.data.uid == request.auth.uid;
+    }
+
+    // ── Chat Sessions ──────────────────────────────────────────────────────
+    match /chat_sessions/{sessionId} {
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid;
+      allow read: if request.auth != null
+        && resource.data.uid == request.auth.uid;
+    }
+
+    // ── Chat Messages ──────────────────────────────────────────────────────
+    match /chat_messages/{msgId} {
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid;
+      allow read: if request.auth != null
+        && resource.data.uid == request.auth.uid;
+    }
+  }
+}

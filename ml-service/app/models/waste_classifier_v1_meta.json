@@ -1,0 +1,97 @@
+{
+  "modelName": "waste-classifier",
+  "version": "v1",
+  "algorithm": "StandardScaler + MLPClassifier(128, 64)",
+  "classes": [
+    "battery",
+    "glass",
+    "metal",
+    "organic_waste",
+    "paper_cardboard",
+    "plastic",
+    "textiles",
+    "trash"
+  ],
+  "inputImageSize": [
+    32,
+    32
+  ],
+  "accuracy": 0.5525,
+  "precision": 0.5605691978172381,
+  "recall": 0.5525,
+  "f1Score": 0.5517212410701557,
+  "confidenceThreshold": 0.4,
+  "classificationReport": {
+    "battery": {
+      "precision": 0.5833333333333334,
+      "recall": 0.42,
+      "f1-score": 0.4883720930232558,
+      "support": 50.0
+    },
+    "glass": {
+      "precision": 0.6071428571428571,
+      "recall": 0.68,
+      "f1-score": 0.6415094339622641,
+      "support": 50.0
+    },
+    "metal": {
+      "precision": 0.4166666666666667,
+      "recall": 0.5,
+      "f1-score": 0.45454545454545453,
+      "support": 50.0
+    },
+    "organic_waste": {
+      "precision": 0.6388888888888888,
+      "recall": 0.46,
+      "f1-score": 0.5348837209302325,
+      "support": 50.0
+    },
+    "paper_cardboard": {
+      "precision": 0.5789473684210527,
+      "recall": 0.66,
+      "f1-score": 0.616822429906542,
+      "support": 50.0
+    },
+    "plastic": {
+      "precision": 0.5555555555555556,
+      "recall": 0.6,
+      "f1-score": 0.5769230769230769,
+      "support": 50.0
+    },
+    "textiles": {
+      "precision": 0.6595744680851063,
+      "recall": 0.62,
+      "f1-score": 0.6391752577319587,
+      "support": 50.0
+    },
+    "trash": {
+      "precision": 0.4444444444444444,
+      "recall": 0.48,
+      "f1-score": 0.46153846153846156,
+      "support": 50.0
+    },
+    "accuracy": 0.5525,
+    "macro avg": {
+      "precision": 0.5605691978172381,
+      "recall": 0.5525,
+      "f1-score": 0.5517212410701557,
+      "support": 400.0
+    },
+    "weighted avg": {
+      "precision": 0.5605691978172381,
+      "recall": 0.5525,
+      "f1-score": 0.5517212410701557,
+      "support": 400.0
+    }
+  },
+  "sampleCounts": {
+    "battery": 250,
+    "glass": 250,
+    "metal": 250,
+    "organic_waste": 250,
+    "paper_cardboard": 250,
+    "plastic": 250,
+    "textiles": 250,
+    "trash": 250
+  }
+}

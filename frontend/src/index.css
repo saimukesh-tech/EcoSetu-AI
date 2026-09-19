@@ -1,0 +1,175 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,500;1,9..144,600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   DESIGN TOKENS
+   Sampled from the official EcoSetu AI logo:
+   deep forest #1E4A30, leaf green #3F7A2C, olive green #6B9C2F,
+   fresh lime #8DBB3A, golden yellow #EDA82A, warm gold #F4C15C,
+   cream #FBF7EE, warm white #FFFDF8, charcoal #182018.
+   Values below are RGB triplets (no "rgb()" wrapper) so Tailwind's
+   <alpha-value> opacity modifiers work, e.g. bg-brand-primary/10.
+   ============================================================ */
+:root {
+  /* Light theme (default) */
+  --color-background: 251 247 238;          /* #FBF7EE cream */
+  --color-background-subtle: 246 241 228;   /* #F6F1E4 */
+  --color-surface: 255 253 248;             /* #FFFDF8 warm white */
+  --color-surface-elevated: 255 255 255;    /* pure white for elevated cards */
+  --color-surface-sunken: 240 235 221;      /* #F0EBDD */
+
+  --color-brand-primary: 63 122 44;         /* #3F7A2C leaf green */
+  --color-brand-primary-hover: 46 95 32;    /* #2E5F20 */
+  --color-brand-secondary: 107 156 47;      /* #6B9C2F olive green */
+  --color-brand-accent: 237 168 42;         /* #EDA82A golden yellow — decorative/background use */
+  --color-brand-accent-strong: 143 90 15;   /* #8F5A0F deep amber-gold — meets 4.5:1 on cream for text use */
+  --color-brand-forest: 30 74 48;           /* #1E4A30 deep forest */
+
+  --color-text-primary: 24 32 24;           /* #182018 charcoal */
+  --color-text-secondary: 71 84 71;         /* #475447 */
+  --color-text-muted: 87 98 79;             /* #57624F muted green-gray, WCAG AA (6:1) on cream */
+  --color-text-on-brand: 255 253 248;
+
+  --color-border: 224 217 199;              /* #E0D9C7 */
+  --color-border-subtle: 236 231 217;       /* #ECE7D9 */
+  --color-border-strong: 197 188 165;       /* #C5BCA5 */
+
+  --color-success: 63 122 44;
+  --color-success-subtle: 227 240 214;
+  --color-warning: 143 90 15;
+  --color-warning-subtle: 250 233 199;
+  --color-error: 179 55 45;
+  --color-error-subtle: 249 222 218;
+  --color-info: 43 106 148;
+  --color-info-subtle: 219 234 242;
+
+  --shadow-color: 15 34 20;
+  --radius-card: 20px;
+
+  color-scheme: light;
+}
+
+:root.dark {
+  /* Dark theme — deep forest & charcoal, not an inverted light theme */
+  --color-background: 13 19 15;             /* #0D130F */
+  --color-background-subtle: 17 25 19;      /* #111913 */
+  --color-surface: 22 31 24;                /* #161F18 */
+  --color-surface-elevated: 27 38 29;       /* #1B261D */
+  --color-surface-sunken: 10 15 11;         /* #0A0F0B */
+
+  --color-brand-primary: 141 187 58;        /* #8DBB3A fresh lime — brighter for dark contrast */
+  --color-brand-primary-hover: 158 199 84;  /* #9EC754 */
+  --color-brand-secondary: 107 156 47;      /* #6B9C2F */
+  --color-brand-accent: 244 193 92;         /* #F4C15C warm gold, softer than saturated gold on dark */
+  --color-brand-accent-strong: 237 168 42;  /* #EDA82A */
+  --color-brand-forest: 30 74 48;           /* #1E4A30 — fixed brand ink, same in both themes (not theme-adaptive) */
+
+  --color-text-primary: 237 241 233;        /* #EDF1E9 */
+  --color-text-secondary: 178 190 175;      /* #B2BEAF */
+  --color-text-muted: 130 143 128;          /* #828F80 */
+  --color-text-on-brand: 13 19 15;
+
+  --color-border: 41 54 42;                 /* #29362A */
+  --color-border-subtle: 32 43 33;          /* #202B21 */
+  --color-border-strong: 58 74 58;          /* #3A4A3A */
+
+  --color-success: 141 187 58;
+  --color-success-subtle: 30 43 22;
+  --color-warning: 244 193 92;
+  --color-warning-subtle: 52 42 20;
+  --color-error: 224 110 98;
+  --color-error-subtle: 51 26 24;
+  --color-info: 106 170 214;
+  --color-info-subtle: 20 38 48;
+
+  --shadow-color: 0 0 0;
+
+  color-scheme: dark;
+}
+
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply font-sans bg-background text-text-primary transition-colors duration-240;
+  }
+
+  h1, h2, h3, h4 { @apply font-display text-text-primary; }
+
+  :focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgb(var(--color-brand-primary) / 0.4);
+    border-radius: 6px;
+  }
+
+  ::selection {
+    background: rgb(var(--color-brand-primary) / 0.25);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+  .card-shadow { box-shadow: 0 1px 2px rgb(var(--shadow-color) / 0.04), 0 1px 1px rgb(var(--shadow-color) / 0.03); }
+
+  /* Curved section divider — organic, not a hard edge */
+  .curve-divider-bottom {
+    clip-path: ellipse(60% 100% at 50% 0%);
+  }
+
+  .sr-only-focusable:not(:focus) {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
+
+  /* Shared micro-interaction primitives — keep motion restrained (150-220ms)
+     and consistent across every interactive surface (buttons, cards, nav, icons). */
+  .transition-standard { transition-duration: 200ms; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); }
+
+  .hover-lift { transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1); }
+  .hover-lift:hover { transform: translateY(-3px); }
+  @media (prefers-reduced-motion: reduce) {
+    .hover-lift:hover { transform: none; }
+  }
+
+  /* Nav link with an animated underline on hover/focus — replaces a bare color transition. */
+  .nav-underline {
+    position: relative;
+    transition: color 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .nav-underline::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; bottom: -4px;
+    height: 2px;
+    background: rgb(var(--color-brand-primary));
+    border-radius: 1px;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .nav-underline:hover, .nav-underline:focus-visible { color: rgb(var(--color-brand-primary)); }
+  .nav-underline:hover::after, .nav-underline:focus-visible::after { transform: scaleX(1); }
+}

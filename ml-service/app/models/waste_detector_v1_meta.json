@@ -1,0 +1,60 @@
+{
+  "modelName": "waste-detector",
+  "version": "v1",
+  "categories": {
+    "0": "biowaste",
+    "1": "glass",
+    "2": "household waste",
+    "3": "metal",
+    "4": "paper/cardboard",
+    "5": "plastic"
+  },
+  "totalAnnotations": 2461,
+  "totalPolygons": 2461,
+  "accuracy": 1.0,
+  "classificationReport": {
+    "glass": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 291.0
+    },
+    "household waste": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 668.0
+    },
+    "metal": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 417.0
+    },
+    "paper/cardboard": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 361.0
+    },
+    "plastic": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 724.0
+    },
+    "accuracy": 1.0,
+    "macro avg": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 2461.0
+    },
+    "weighted avg": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 2461.0
+    }
+  }
+}

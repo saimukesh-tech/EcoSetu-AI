@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+backend/node_modules/
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Environment files (NEVER commit real secrets)
+.env
+frontend/.env
+backend/.env
+.env.local
+.env.production
+
+# Build output
+dist/
+build/
+frontend/dist/
+backend/dist/
+
+# Large dataset zips & nested git repos
+*.zip
+Ecosetu-ML/
+ml_reports/
+
+# Firebase service account (NEVER commit)
+*-service-account.json
+serviceAccountKey.json
+firebase-adminsdk*.json
+
+# Editor & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# TypeScript
+*.tsbuildinfo
+
