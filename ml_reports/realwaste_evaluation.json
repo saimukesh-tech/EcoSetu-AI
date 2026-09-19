@@ -1,0 +1,179 @@
+{
+  "datasetName": "RealWaste (Whyte's Gully Waste Facility, Australia)",
+  "license": "CC BY-NC-SA 4.0",
+  "citation": "MDPI 2023 - RealWaste: A Novel Real-Life Data Set for Landfill Waste Classification",
+  "modelEvaluated": "waste-classifier-v1",
+  "totalImagesEvaluated": 4752,
+  "overallMetrics": {
+    "accuracy": 0.16456228956228955,
+    "precision": 0.26146390695473154,
+    "recall": 0.16456228956228955,
+    "f1Score": 0.16654209560197436
+  },
+  "classMapping": {
+    "Cardboard": "paper_cardboard",
+    "Food Organics": "organic_waste",
+    "Glass": "glass",
+    "Metal": "metal",
+    "Miscellaneous Trash": "trash",
+    "Paper": "paper_cardboard",
+    "Plastic": "plastic",
+    "Textile Trash": "textiles",
+    "Vegetation": "organic_waste"
+  },
+  "classes": [
+    "battery",
+    "glass",
+    "metal",
+    "organic_waste",
+    "paper_cardboard",
+    "plastic",
+    "textiles",
+    "trash"
+  ],
+  "confusionMatrix": [
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      5,
+      91,
+      174,
+      0,
+      20,
+      107,
+      0,
+      23
+    ],
+    [
+      64,
+      260,
+      218,
+      16,
+      48,
+      69,
+      2,
+      113
+    ],
+    [
+      143,
+      235,
+      223,
+      52,
+      51,
+      84,
+      4,
+      55
+    ],
+    [
+      85,
+      153,
+      297,
+      32,
+      99,
+      192,
+      0,
+      103
+    ],
+    [
+      78,
+      206,
+      222,
+      11,
+      26,
+      260,
+      0,
+      118
+    ],
+    [
+      70,
+      70,
+      57,
+      11,
+      20,
+      51,
+      4,
+      35
+    ],
+    [
+      69,
+      125,
+      111,
+      23,
+      41,
+      67,
+      1,
+      58
+    ]
+  ],
+  "perClassReport": {
+    "battery": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 0.0
+    },
+    "glass": {
+      "precision": 0.07982456140350877,
+      "recall": 0.21666666666666667,
+      "f1-score": 0.11666666666666667,
+      "support": 420.0
+    },
+    "metal": {
+      "precision": 0.1674347158218126,
+      "recall": 0.2759493670886076,
+      "f1-score": 0.2084130019120459,
+      "support": 790.0
+    },
+    "organic_waste": {
+      "precision": 0.3586206896551724,
+      "recall": 0.06139315230224321,
+      "f1-score": 0.10483870967741936,
+      "support": 847.0
+    },
+    "paper_cardboard": {
+      "precision": 0.32459016393442625,
+      "recall": 0.10301768990634755,
+      "f1-score": 0.15639810426540285,
+      "support": 961.0
+    },
+    "plastic": {
+      "precision": 0.3132530120481928,
+      "recall": 0.28230184581976114,
+      "f1-score": 0.29697315819531694,
+      "support": 921.0
+    },
+    "textiles": {
+      "precision": 0.36363636363636365,
+      "recall": 0.012578616352201259,
+      "f1-score": 0.0243161094224924,
+      "support": 318.0
+    },
+    "trash": {
+      "precision": 0.11485148514851486,
+      "recall": 0.11717171717171718,
+      "f1-score": 0.116,
+      "support": 495.0
+    },
+    "accuracy": 0.16456228956228955,
+    "macro avg": {
+      "precision": 0.2152763739559989,
+      "recall": 0.13363488191344308,
+      "f1-score": 0.127950718767418,
+      "support": 4752.0
+    },
+    "weighted avg": {
+      "precision": 0.26146390695473154,
+      "recall": 0.16456228956228955,
+      "f1-score": 0.16654209560197436,
+      "support": 4752.0
+    }
+  }
+}

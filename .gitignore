@@ -20,11 +20,6 @@ build/
 frontend/dist/
 backend/dist/
 
-# Large dataset zips & nested git repos
-*.zip
-Ecosetu-ML/
-ml_reports/
-
 # Firebase service account (NEVER commit)
 *-service-account.json
 serviceAccountKey.json
@@ -42,4 +37,5 @@ npm-debug.log*
 
 # TypeScript
 *.tsbuildinfo
+
 
