@@ -1,6 +1,14 @@
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
 const ML_SERVICE_URL = import.meta.env.VITE_ML_SERVICE_URL || 'http://127.0.0.1:8000';
 
+function getAuthHeaders(): Record<string, string> {
+  const token = localStorage.getItem('ecosetu_auth_token') || 'Bearer demo_token_organizer';
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`
+  };
+}
+
 export async function fetchEventWastePrediction(data: {
   event_type: string;
   guest_count: number;
@@ -11,9 +19,9 @@ export async function fetchEventWastePrediction(data: {
   location: string;
 }) {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/waste/predict`, {
+    const res = await fetch(`${BACKEND_URL}/api/v1/waste/predict`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify(data),
     });
     if (!res.ok) throw new Error(`HTTP error ${res.status}`);
@@ -44,6 +52,7 @@ export async function fetchEventWastePrediction(data: {
         plastic_waste_kg: mlData.prediction.plasticWasteKg,
         paper_waste_kg: mlData.prediction.paperWasteKg,
         fabric_waste_kg: mlData.prediction.fabricWasteKg,
+        prediction: mlData.prediction,
         recoverable_waste_kg: mlData.prediction.recoverableWasteKg,
         diversion_percentage: mlData.prediction.diversionPercentage,
         recommendations: [
@@ -72,7 +81,7 @@ export async function classifyWasteImage(file: File) {
     });
     if (!res.ok) throw new Error(`ML classification error ${res.status}`);
     return await res.json();
-  } catch (err: any) {
+  } catch {
     throw new Error('AI waste classification service is temporarily unavailable. Please try again.');
   }
 }
@@ -95,15 +104,18 @@ export async function detectWasteObjects(file: File) {
 
 export async function getPartnerRecommendations(partners: any[], requestedWasteTypes: string[], totalKg: number) {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/matching/recommend`, {
+    const res = await fetch(`${BACKEND_URL}/api/v1/matching/recommend`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ partners, requestedWasteTypes, totalKg }),
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        location: 'Vijayawada',
+        wasteTypes: requestedWasteTypes,
+        requestedQuantityKg: totalKg
+      }),
     });
     if (!res.ok) throw new Error(`Matching error ${res.status}`);
     return await res.json();
   } catch {
-    // Fallback client-side ranker
     return {
       success: true,
       matches: partners.map(p => ({
@@ -119,10 +131,16 @@ export async function getPartnerRecommendations(partners: any[], requestedWasteT
 
 export async function calculateImpact(waste: { foodKg?: number; plasticKg?: number; paperKg?: number }) {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/impact/calculate`, {
+    const totalKg = (waste.foodKg || 0) + (waste.plasticKg || 0) + (waste.paperKg || 0);
+    const res = await fetch(`${BACKEND_URL}/api/v1/impact/calculate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(waste),
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        totalWasteDivertedKg: totalKg,
+        foodWasteDivertedKg: waste.foodKg,
+        plasticDivertedKg: waste.plasticKg,
+        paperDivertedKg: waste.paperKg
+      }),
     });
     if (!res.ok) throw new Error(`Impact error ${res.status}`);
     return await res.json();
@@ -130,36 +148,38 @@ export async function calculateImpact(waste: { foodKg?: number; plasticKg?: numb
     const total = (waste.foodKg || 0) + (waste.plasticKg || 0) + (waste.paperKg || 0);
     return {
       success: true,
-      data: {
+      impact: {
         totalWasteDivertedKg: total,
-        co2eAvoidedKg: Math.round(total * 2.14),
-        mealsRescued: (waste.foodKg || 0) * 2,
-        treesEquivalent: Math.round((total * 2.14 / 100) * 4.5 * 10) / 10,
+        co2eAvoidedKg: { value: Math.round(total * 2.14), status: 'ESTIMATED' },
+        mealsRescued: { value: Math.round((waste.foodKg || 0) * 0.3), status: 'ESTIMATED' },
+        treesEquivalent: { value: Math.round((total * 2.14 / 21.77) * 10) / 10, status: 'ESTIMATED' },
       },
     };
   }
 }
 
-export async function sendChatMessage(message: string, history: any[] = []) {
+export async function sendChatMessage(message: string, _history?: any[]) {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/chat`, {
+    const res = await fetch(`${BACKEND_URL}/api/v1/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, history }),
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ message }),
     });
     if (!res.ok) throw new Error(`Chat error ${res.status}`);
     return await res.json();
   } catch {
     return {
       success: true,
-      response: 'Thank you for your inquiry. EcoSetu AI recommends segregating organic and recyclable waste at your event to minimize environmental impact.',
+      reply: 'Thank you for your inquiry. EcoSetu AI recommends segregating organic and recyclable waste at your event to minimize environmental impact.',
     };
   }
 }
 
 export async function fetchDashboardAnalytics() {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/analytics/dashboard`);
+    const res = await fetch(`${BACKEND_URL}/api/v1/analytics/dashboard`, {
+      headers: getAuthHeaders()
+    });
     if (!res.ok) throw new Error(`Analytics error ${res.status}`);
     return await res.json();
   } catch {

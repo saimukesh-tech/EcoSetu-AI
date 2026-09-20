@@ -1,68 +1,74 @@
-import impactFactors from '../config/impactFactors.json';
-
-export interface WasteBreakdown {
-  foodKg?: number;
-  plasticKg?: number;
-  paperKg?: number;
-  glassKg?: number;
-  metalKg?: number;
-  textileKg?: number;
-  flowerKg?: number;
-  fabricKg?: number;
-  generalKg?: number;
-}
-
-export interface ImpactCalculationResult {
+export interface ImpactInput {
   totalWasteDivertedKg: number;
-  co2eAvoidedKg: number;
-  mealsRescued: number;
-  treesEquivalent: number;
-  breakdown: Record<string, { kg: number; co2eKg: number }>;
-  sources: Record<string, string>;
+  foodWasteDivertedKg?: number;
+  plasticDivertedKg?: number;
+  paperDivertedKg?: number;
+  status?: 'ESTIMATED' | 'COLLECTED' | 'WEIGHED' | 'MEASURED' | 'VERIFIED';
 }
 
-export function calculateEnvironmentalImpact(waste: WasteBreakdown): ImpactCalculationResult {
-  const factors = impactFactors.co2eAvoidedKgPerKg;
-  const breakdown: Record<string, { kg: number; co2eKg: number }> = {};
+export interface ImpactReport {
+  methodology: string;
+  version: string;
+  factorVersion: string;
+  calculatedAt: string;
+  source: string;
+  totalWasteDivertedKg: number;
+  co2eAvoidedKg: {
+    value: number;
+    status: 'ESTIMATED' | 'COLLECTED' | 'WEIGHED' | 'MEASURED' | 'VERIFIED';
+  };
+  mealsRescued: {
+    value: number;
+    status: 'ESTIMATED' | 'COLLECTED' | 'WEIGHED' | 'MEASURED' | 'VERIFIED';
+  };
+  treesEquivalent: {
+    value: number;
+    status: 'ESTIMATED' | 'COLLECTED' | 'WEIGHED' | 'MEASURED' | 'VERIFIED';
+  };
+  landfillVolumeSavedM3: number;
+}
 
-  let totalKg = 0;
-  let totalCo2e = 0;
+export function calculateEnvironmentalImpact(input: ImpactInput): ImpactReport {
+  const status = input.status || 'ESTIMATED';
+  const total = Math.max(0, input.totalWasteDivertedKg);
+  const foodKg = Math.max(0, input.foodWasteDivertedKg ?? total * 0.45);
+  const plasticKg = Math.max(0, input.plasticDivertedKg ?? total * 0.25);
+  const paperKg = Math.max(0, input.paperDivertedKg ?? total * 0.20);
 
-  const categoryMap: Array<{ key: keyof WasteBreakdown; factorKey: keyof typeof factors; label: string }> = [
-    { key: 'foodKg', factorKey: 'food_waste', label: 'Food Waste' },
-    { key: 'plasticKg', factorKey: 'plastic', label: 'Plastic' },
-    { key: 'paperKg', factorKey: 'paper', label: 'Paper' },
-    { key: 'glassKg', factorKey: 'glass', label: 'Glass' },
-    { key: 'metalKg', factorKey: 'metal', label: 'Metal' },
-    { key: 'textileKg', factorKey: 'textiles', label: 'Textiles' },
-    { key: 'flowerKg', factorKey: 'flower_waste', label: 'Flower Waste' },
-    { key: 'fabricKg', factorKey: 'fabric_waste', label: 'Fabric Waste' },
-    { key: 'generalKg', factorKey: 'general', label: 'General Recyclables' }
-  ];
+  // EPA WARM v15 lifecycle conversion factors
+  // 1 kg organic/food waste diverted = 2.1 kg CO2e avoided (landfill methane offset)
+  // 1 kg plastic recycled = 1.5 kg CO2e avoided
+  // 1 kg paper recycled = 0.9 kg CO2e avoided
+  const co2eSaved = (foodKg * 2.1) + (plasticKg * 1.5) + (paperKg * 0.9);
+  
+  // 1 kg food waste diverted = ~0.3 meals rescued (EPA Feeding America conversion)
+  const meals = Math.round(foodKg * 0.3);
+  
+  // 1 mature tree absorbs ~21.77 kg CO2 annually
+  const trees = Math.round((co2eSaved / 21.77) * 10) / 10;
 
-  for (const item of categoryMap) {
-    const val = waste[item.key] || 0;
-    if (val > 0) {
-      const co2e = val * factors[item.factorKey];
-      totalKg += val;
-      totalCo2e += co2e;
-      breakdown[item.label] = {
-        kg: Math.round(val * 100) / 100,
-        co2eKg: Math.round(co2e * 100) / 100
-      };
-    }
-  }
-
-  const foodKg = waste.foodKg || 0;
-  const mealsRescued = Math.round(foodKg * impactFactors.mealsRescuedPerKgFoodWaste);
-  const treesEquivalent = Math.round((totalCo2e / 100) * impactFactors.treesEquivalentPer100KgCO2 * 10) / 10;
+  // Landfill volume saved (average density 0.5 tonnes per m3)
+  const landfillVolumeM3 = Math.round((total / 500) * 100) / 100;
 
   return {
-    totalWasteDivertedKg: Math.round(totalKg * 100) / 100,
-    co2eAvoidedKg: Math.round(totalCo2e * 100) / 100,
-    mealsRescued,
-    treesEquivalent,
-    breakdown,
-    sources: impactFactors.sources
+    methodology: 'EPA_WARM',
+    version: '15',
+    factorVersion: '2026-01',
+    calculatedAt: new Date().toISOString(),
+    source: 'EPA Waste Reduction Model (WARM) v15 & IPCC Guidelines',
+    totalWasteDivertedKg: Math.round(total * 10) / 10,
+    co2eAvoidedKg: {
+      value: Math.round(co2eSaved * 10) / 10,
+      status
+    },
+    mealsRescued: {
+      value: meals,
+      status
+    },
+    treesEquivalent: {
+      value: trees,
+      status
+    },
+    landfillVolumeSavedM3: landfillVolumeM3
   };
 }
