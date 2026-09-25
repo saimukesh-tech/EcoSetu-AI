@@ -16,11 +16,11 @@ export async function predictWasteHandler(req: AuthenticatedRequest, res: Respon
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          event_type: input.event_type,
-          guest_count: input.guest_count,
-          duration: input.duration,
-          food_type: input.food_type,
-          catering_type: input.catering_type,
+          eventType: input.event_type,
+          guestCount: input.guest_count,
+          durationHours: input.duration,
+          foodType: input.food_type,
+          cateringType: input.catering_type,
           location: input.location
         }),
         signal: controller.signal
@@ -35,11 +35,22 @@ export async function predictWasteHandler(req: AuthenticatedRequest, res: Respon
           requestId: req.requestId
         });
       }
-    } catch {
+
+      console.warn(JSON.stringify({
+        type: 'ML_SERVICE_HTTP_FAIL',
+        statusCode: mlResponse.status,
+        requestId: req.requestId
+      }));
+    } catch (error: any) {
       clearTimeout(timeoutId);
+      console.warn(JSON.stringify({
+        type: 'ML_SERVICE_UNAVAILABLE',
+        error: error.name === 'AbortError' ? 'ML_TIMEOUT' : error.message,
+        requestId: req.requestId
+      }));
     }
 
-    // Controlled ML Fallback
+    // Controlled Heuristic Fallback (Accurate Metadata & Unmisleading ML Metrics)
     const baseMultiplier = input.guest_count * (input.duration / 4);
     const totalWasteKg = Math.round(baseMultiplier * 0.85 * 100) / 100;
     const foodWasteKg = Math.round(totalWasteKg * 0.45 * 100) / 100;
@@ -54,12 +65,16 @@ export async function predictWasteHandler(req: AuthenticatedRequest, res: Respon
         valueKg: totalWasteKg,
         lowerBoundKg: Math.round(totalWasteKg * 0.85),
         upperBoundKg: Math.round(totalWasteKg * 1.15),
-        confidence: 0.85
+        rangeType: 'heuristic_planning_range',
+        confidence: null,
+        uncertainty: 'HIGH'
       },
       model: {
-        name: 'event-waste-model-heuristic',
+        name: 'event-waste-heuristic-fallback',
         version: 'v1.0.0',
-        r2Score: 0.9238,
+        algorithm: 'DomainHeuristicRules',
+        r2Score: null,
+        metrics: null,
         fallback: true
       },
       requestId: req.requestId

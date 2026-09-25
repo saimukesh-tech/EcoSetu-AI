@@ -1,4 +1,4 @@
-import express, { Express, Request, Response } from 'express';
+import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
@@ -26,7 +26,7 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' }
 }));
 
-// CORS origin restriction (Removal of wildcard '*')
+// Strict CORS Origin Enforcement (Reject any unknown origin)
 const allowedOrigins = [
   process.env.FRONTEND_URL,
   'http://localhost:5173',
@@ -38,11 +38,11 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow non-browser requests (Postman, curl, backend-to-backend) or matched origins
-    if (!origin || allowedOrigins.includes(origin) || allowedOrigins.some(o => origin.startsWith(o))) {
+    // Allow non-browser requests (Postman, curl, server-to-server) or exact whitelisted origins
+    if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(null, true); // Permissive in dev, validated in production
+      callback(new Error(`Origin '${origin}' is not allowed by CORS security policy.`));
     }
   },
   credentials: true,
@@ -50,8 +50,9 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID', 'Idempotency-Key']
 }));
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Scoped body payload size limits
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // Attach Request ID and Structured Logging
 app.use(requestIdMiddleware);
@@ -69,13 +70,18 @@ app.use('/api/v1/impact', impactRoutesV1);
 app.use('/api/v1/chat', chatRoutesV1);
 app.use('/api/v1/analytics', analyticsRoutesV1);
 
-// Backward compatibility routes forwarding to v1
-app.use('/api/waste', wasteRoutesV1);
-app.use('/api/matching', matchingRoutesV1);
-app.use('/api/pickup', pickupRoutesV1);
-app.use('/api/impact', impactRoutesV1);
-app.use('/api/chat', chatRoutesV1);
-app.use('/api/analytics', analyticsRoutesV1);
+// Backward compatibility router with Deprecation Notice Header
+const deprecationMiddleware = (req: Request, res: Response, next: NextFunction) => {
+  res.setHeader('Warning', '299 EcoSetu - "Deprecated API endpoint. Please migrate to /api/v1/*"');
+  next();
+};
+
+app.use('/api/waste', deprecationMiddleware, wasteRoutesV1);
+app.use('/api/matching', deprecationMiddleware, matchingRoutesV1);
+app.use('/api/pickup', deprecationMiddleware, pickupRoutesV1);
+app.use('/api/impact', deprecationMiddleware, impactRoutesV1);
+app.use('/api/chat', deprecationMiddleware, chatRoutesV1);
+app.use('/api/analytics', deprecationMiddleware, analyticsRoutesV1);
 
 // 404 Route Handler
 app.use((req: Request, res: Response) => {

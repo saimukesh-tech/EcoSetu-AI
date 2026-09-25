@@ -7,11 +7,42 @@ export interface UserPayload {
   email: string;
   role: 'ORGANIZER' | 'RECOVERY_PARTNER' | 'ADMIN';
   name?: string;
-  organizationId?: string;
+  organizationId: string;
 }
 
 export interface AuthenticatedRequest extends RequestWithId {
   user?: UserPayload;
+}
+
+// Verified user metadata resolver map
+const verifiedUserRolesStore: Record<string, { role: 'ORGANIZER' | 'RECOVERY_PARTNER' | 'ADMIN'; organizationId: string; name: string }> = {
+  'demo_organizer_123': { role: 'ORGANIZER', organizationId: 'org_demo_1', name: 'Demo Event Organizer' },
+  'demo_partner_456': { role: 'RECOVERY_PARTNER', organizationId: 'org_demo_2', name: 'Demo Recovery Partner' },
+  'demo_admin_789': { role: 'ADMIN', organizationId: 'org_demo_admin', name: 'EcoSetu Administrator' }
+};
+
+let adminSdk: any = null;
+
+function getFirebaseAdminInstance() {
+  if (!adminSdk) {
+    try {
+      const admin = require('firebase-admin');
+      if (admin.apps.length === 0) {
+        if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+          const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+          admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount)
+          });
+        } else {
+          admin.initializeApp();
+        }
+      }
+      adminSdk = admin;
+    } catch {
+      adminSdk = null;
+    }
+  }
+  return adminSdk;
 }
 
 export async function authenticateUser(req: AuthenticatedRequest, res: Response, next: NextFunction) {
@@ -71,26 +102,32 @@ export async function authenticateUser(req: AuthenticatedRequest, res: Response,
     }
   }
 
-  // Cryptographic token verification
+  // Cryptographic token verification using Firebase Admin SDK
   try {
-    // Note: If firebase-admin is initialized, verifyIdToken cryptographically checks signature, issuer, & expiration
-    const decoded: any = JSON.parse(Buffer.from(token.split('.')[1] || '', 'base64').toString('utf-8'));
-    
-    // Check token expiration timestamp
-    if (decoded.exp && decoded.exp * 1000 < Date.now()) {
-      return next(new AuthError('Authentication token has expired. Please sign in again.'));
-    }
+    const admin = getFirebaseAdminInstance();
+    if (admin && admin.apps.length > 0) {
+      const decodedToken = await admin.auth().verifyIdToken(token, true); // true = checkRevoked
+      
+      // Resolve role & organizationId from verified custom claims or database store (never client headers)
+      const userMeta = verifiedUserRolesStore[decodedToken.uid] || {
+        role: (decodedToken.role as any) || 'ORGANIZER',
+        organizationId: (decodedToken.organizationId as any) || `org_${decodedToken.uid}`,
+        name: decodedToken.name || 'EcoSetu User'
+      };
 
-    req.user = {
-      uid: decoded.user_id || decoded.sub || 'user_123',
-      email: decoded.email || 'user@ecosetu.ai',
-      role: decoded.role || 'ORGANIZER',
-      name: decoded.name || 'EcoSetu User',
-      organizationId: decoded.organizationId || 'org_default'
-    };
-    return next();
-  } catch {
-    return next(new AuthError('Invalid authentication token signature or structure.'));
+      req.user = {
+        uid: decodedToken.uid,
+        email: decodedToken.email || '',
+        role: userMeta.role,
+        name: userMeta.name,
+        organizationId: userMeta.organizationId
+      };
+      return next();
+    }
+    
+    return next(new AuthError('Firebase Admin authentication service unavailable.'));
+  } catch (error: any) {
+    return next(new AuthError(`Cryptographic token verification failed: ${error.message || 'Invalid or revoked token'}`));
   }
 }
 
@@ -108,20 +145,35 @@ export function requireRole(allowedRoles: Array<'ORGANIZER' | 'RECOVERY_PARTNER'
   };
 }
 
-export function authorizeResourceOwner(getResourceOwnerId: (req: AuthenticatedRequest) => string | undefined) {
+// Resource Ownership & Multi-tenant Organization Isolation Middleware
+export function authorizeResourceAccess(options: {
+  getResourceOwnerId?: (req: AuthenticatedRequest) => string | undefined;
+  getResourceOrgId?: (req: AuthenticatedRequest) => string | undefined;
+}) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
       return next(new AuthError());
     }
 
-    // Admins bypass resource ownership checks
+    // Admins bypass resource & tenant checks
     if (req.user.role === 'ADMIN') {
       return next();
     }
 
-    const ownerId = getResourceOwnerId(req);
-    if (ownerId && ownerId !== req.user.uid) {
-      return next(new ForbiddenError('Forbidden. You do not have permission to access or modify this resource.'));
+    // 1. Organization / Tenant Isolation Check
+    if (options.getResourceOrgId) {
+      const resourceOrgId = options.getResourceOrgId(req);
+      if (resourceOrgId && resourceOrgId !== req.user.organizationId) {
+        return next(new ForbiddenError('Forbidden. Resource belongs to another organization tenant.'));
+      }
+    }
+
+    // 2. Resource Owner Check
+    if (options.getResourceOwnerId) {
+      const ownerId = options.getResourceOwnerId(req);
+      if (ownerId && ownerId !== req.user.uid) {
+        return next(new ForbiddenError('Forbidden. You do not own this resource.'));
+      }
     }
 
     next();
