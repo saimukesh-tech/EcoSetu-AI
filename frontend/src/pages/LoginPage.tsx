@@ -106,8 +106,20 @@ export default function LoginPage() {
           <div className="w-full max-w-md">
             <div className="mb-8">
               <h1 className="text-h1 text-text-primary mb-1.5">Welcome back</h1>
-              <p className="text-body-sm text-text-muted">Sign in to your EcoSetu AI account</p>
+              <p className="text-body-sm text-text-muted">Sign in to your EcoSetu AI account or explore instantly</p>
             </div>
+
+            <Button
+              variant="secondary"
+              fullWidth
+              className="mb-3 bg-brand-primary/10 text-brand-primary hover:bg-brand-primary/20 border-0 font-semibold"
+              onClick={async () => {
+                await signInAsDemoUser('Demo Event Organizer', 'organizer@ecosetu.ai');
+                navigate('/dashboard', { replace: true });
+              }}
+            >
+              ⚡ Instant Demo Sign In (Explore Platform)
+            </Button>
 
             <Button
               variant="outline"

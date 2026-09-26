@@ -105,6 +105,18 @@ export default function SignupPage() {
               <p className="text-body-sm text-text-muted">Join EcoSetu AI — free for event organizers</p>
             </div>
 
+            <Button
+              variant="secondary"
+              fullWidth
+              className="mb-3 bg-brand-primary/10 text-brand-primary hover:bg-brand-primary/20 border-0 font-semibold"
+              onClick={async () => {
+                await signInAsDemoUser('Demo Event Organizer', 'organizer@ecosetu.ai');
+                navigate('/dashboard', { replace: true });
+              }}
+            >
+              ⚡ Instant Demo Sign In (Explore Platform)
+            </Button>
+
             <Button variant="outline" fullWidth className="mb-6" onClick={handleGoogle} loading={googleLoading} icon={!googleLoading ? GOOGLE_ICON : undefined}>
               Continue with Google
             </Button>
