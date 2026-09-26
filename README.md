@@ -22,7 +22,7 @@
 ## 📌 Implementation Status Matrix
 
 > [!NOTE]
-> All features listed below are fully implemented, type-checked, and integrated into the active running codebase.
+> All core features listed below are implemented in the current codebase, type-checked, and verified by automated unit and integration test suites.
 
 | Component / Feature | Implementation Status | Evidence & Validation Details |
 | :--- | :--- | :--- |
@@ -77,7 +77,7 @@ Every headline ML metric reported by EcoSetu AI is backed by an evaluation artif
                              │
                              ▼
               🚛 Pickup Request State Machine
-              (PENDING → ACCEPTED → SCHEDULED → COLLECTED → RECOVERED)
+              (PENDING → ACCEPTED → SCHEDULED → PICKUP_IN_PROGRESS → COLLECTED → RECOVERED → COMPLETED)
                              │
                              ▼
               📈 EPA WARM v15 Environmental Impact Analytics

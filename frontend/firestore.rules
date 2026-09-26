@@ -54,21 +54,31 @@ service cloud.firestore {
     // ── Pickup Requests ────────────────────────────────────────────────────
     match /pickup_requests/{reqId} {
       allow create: if isAuthenticated() && request.resource.data.organizerUid == request.auth.uid;
-      allow read, update: if isAuthenticated() && (
+      allow read: if isAuthenticated() && (
         resource.data.organizerUid == request.auth.uid ||
         resource.data.partnerUid == request.auth.uid ||
         isAdmin()
       );
+      // Client updates restricted: status transitions cannot be forced via client SDK direct writes
+      allow update: if isAuthenticated() && (
+        (resource.data.organizerUid == request.auth.uid || resource.data.partnerUid == request.auth.uid || isAdmin()) &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status', 'statusHistory', 'currentStatus'])
+      );
       allow delete: if isAuthenticated() && (
         resource.data.organizerUid == request.auth.uid || isAdmin()
       );
+
+      // Subcollection status history: strictly server-only write via Admin SDK
+      match /status_history/{histId} {
+        allow read: if isAuthenticated();
+        allow write: if false;
+      }
     }
 
-    // ── Pickup Status History (Immutable Server/Authorized Operator Audit Trail) ──
+    // ── Pickup Status History (Immutable Server Audit Trail - Admin SDK Writes Only) ──
     match /pickup_status_history/{histId} {
-      allow create: if isAuthenticated() && (
-        request.resource.data.changedBy == request.auth.uid || isAdmin()
-      );
+      // Strictly server-only creates and updates (via Firebase Admin SDK) to prevent client log tampering
+      allow create, update, delete: if false;
       allow read: if isAuthenticated();
     }
 

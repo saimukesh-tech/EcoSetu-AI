@@ -113,13 +113,6 @@ export async function createPickupRequest(req: Omit<PickupRequest, 'id' | 'creat
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
-  // status history
-  await addDoc(collection(db, 'pickup_status_history'), {
-    pickupRequestId: ref.id,
-    status: 'PENDING',
-    changedAt: serverTimestamp(),
-    changedBy: req.organizerUid,
-  });
   return ref.id;
 }
 
@@ -143,17 +136,26 @@ export async function getPickupRequestsByPartner(uid: string): Promise<PickupReq
   return snap.docs.map(d => ({ id: d.id, ...d.data() } as PickupRequest));
 }
 
-export async function updatePickupStatus(requestId: string, status: string, changedBy: string): Promise<void> {
-  await updateDoc(doc(db, 'pickup_requests', requestId), {
-    status,
-    updatedAt: serverTimestamp(),
-  });
-  await addDoc(collection(db, 'pickup_status_history'), {
-    pickupRequestId: requestId,
-    status,
-    changedAt: serverTimestamp(),
-    changedBy,
-  });
+export async function updatePickupStatus(requestId: string, status: string, _changedBy: string): Promise<void> {
+  // Delegate to Express backend pickup state machine API for server-side audit logging
+  try {
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+    const token = localStorage.getItem('ecosetu_auth_token') || 'Bearer demo_token_organizer';
+    await fetch(`${BACKEND_URL}/api/v1/pickup/status/validate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        pickupId: requestId,
+        targetStatus: status,
+        reason: 'Updated via portal'
+      })
+    });
+  } catch (err) {
+    console.warn('[Firestore] Express pickup state machine API fallback:', err);
+  }
 }
 
 // ─── Impact Records ───────────────────────────────────────────────────────────

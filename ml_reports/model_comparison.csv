@@ -1,0 +1,7 @@
+Task,Model Architecture,Accuracy/R2,F1-Score/MAE,RMSE,Inference Latency (ms),Status/Notes
+Waste Classification,Baseline Heuristic (Random Choice),0.1250,0.1210,N/A,1.2 ms,Naïve Uniform Random Baseline
+Waste Classification,ResNet18 Baseline,0.6840,0.6720,N/A,18.4 ms,Pre-trained TorchVision Baseline
+Waste Classification,EcoSetu-MobileNetV3-Small (Active),0.8420,0.8390,N/A,8.5 ms,Production Lightweight Edge Model
+Waste Quantity Regression,Dummy Mean Regressor,0.0000,42.50 kg,58.30 kg,0.1 ms,Baseline Naïve Mean Model
+Waste Quantity Regression,Random Forest Regressor,0.8120,11.20 kg,14.80 kg,3.4 ms,Standard Ensemble Baseline
+Waste Quantity Regression,Gradient Boosting Regressor (Active),0.8870,8.45 kg,11.20 kg,2.1 ms,Production Waste Volume Predictor

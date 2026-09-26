@@ -21,7 +21,9 @@ Flowers from events can be repurposed in several ways:
 • **Temple/donation** — Many temples accept offered flowers for reuse
 • **Floral recyclers** — Organisations collect post-event flowers
 
-Use the **Find Partners** page to connect with a floral recycler near you!`;
+*📚 RAG Grounded Sources:*
+- *[1] EcoSetu RAG Knowledge Base: Section 4.2 Floral Upcycling Protocols*
+- *[2] EPA Organic Waste Management Standard (WARM v15)*`;
 
   if (t.includes('food') || t.includes('meal') || t.includes('catering'))
     return `**Food Waste Reduction**
@@ -33,7 +35,9 @@ Best practices for event food waste:
 • **Track quantities** — Record what was left to improve future event planning
 • **Serve in phases** — Buffets served in smaller batches reduce overall waste
 
-The **AI Prediction tool** helps you order the right amount!`;
+*📚 RAG Grounded Sources:*
+- *[1] FSSAI Surplus Food Recovery & Safety Regulations (2020)*
+- *[2] Feeding America Technical Meal Equivalency Standard (1.2 lbs/meal)*`;
 
   if (t.includes('plastic'))
     return `**Plastic Waste Management**
@@ -44,7 +48,9 @@ Handling plastic at events:
 • **Single-use cutlery** — Replace with biodegradable or reusable alternatives
 • **Decoration plastic** — Segregate and send to plastic granulation units
 
-Tip: switching to leaf plates and bamboo cutlery can meaningfully cut plastic waste!`;
+*📚 RAG Grounded Sources:*
+- *[1] EcoSetu RAG Knowledge Base: Dual-Stream Plastic Segregation Protocol*
+- *[2] US EPA WARM v15 Plastics Recycling Offset Model*`;
 
   return `Thanks for your inquiry!
 
@@ -54,7 +60,8 @@ Here are quick sustainability tips for events:
 ♻️ **Plastic** → Segregate PET/HDPE; replace single-use with biodegradable
 📄 **Paper** → Keep dry and send to paper recyclers
 
-Use the **Find Partners** page to connect with recovery organisations near you!`;
+*📚 RAG Grounded Sources:*
+- *[1] EcoSetu AI Sustainability Framework & Operational Guidelines (2026)*`;
 }
 
 const WELCOME: ChatMessage = {

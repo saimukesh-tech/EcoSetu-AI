@@ -120,3 +120,25 @@ $$\text{Meals Rescued} = 0.3 \times \text{Food}_{\text{kg}}$$
 $$\text{Tree Equivalent} = \frac{\text{CO}_2\text{e}}{21.77}$$
 
 $$\text{Landfill Volume Saved (m}^3\text{)} = \frac{\text{Total}_{\text{kg}}}{500}$$
+
+---
+
+## 6. Pickup Request State Machine Lifecycle (7 Stages)
+
+The pickup state machine guarantees strict, unidirectional state transitions audited by server logs:
+
+```text
+[ PENDING ] ─────► [ ACCEPTED ] ─────► [ SCHEDULED ] ─────► [ PICKUP_IN_PROGRESS ]
+                                                                     │
+[ COMPLETED ] ◄───── [ RECOVERED ] ◄───── [ COLLECTED ] ◄────────────┘
+```
+
+**State Machine Transition Invariants:**
+1. `PENDING` $\rightarrow$ `ACCEPTED` (Partner accepts request & assigns transport)
+2. `ACCEPTED` $\rightarrow$ `SCHEDULED` (Pickup window confirmed with organizer)
+3. `SCHEDULED` $\rightarrow$ `PICKUP_IN_PROGRESS` (Logistics vehicle dispatched)
+4. `PICKUP_IN_PROGRESS` $\rightarrow$ `COLLECTED` (Waste stream collected on-site)
+5. `COLLECTED` $\rightarrow$ `RECOVERED` (Delivered to recycling/composting facility)
+6. `RECOVERED` $\rightarrow$ `COMPLETED` (Final weights verified & impact recorded)
+7. Any active pre-collection state $\rightarrow$ `CANCELLED` (Terminal abort path)
+
