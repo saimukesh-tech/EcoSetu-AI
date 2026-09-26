@@ -3,10 +3,12 @@ import { useParams, Link } from 'react-router-dom';
 import { AppLayout } from '../components/layout/AppLayout';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
 import { StatusBadge } from '../components/ui/Badge';
 import { EmptyState } from '../components/ui/EmptyState';
+import { Alert } from '../components/feedback/Alert';
 import { SkeletonCard } from '../components/feedback/Skeleton';
-import { ArrowLeft, Sparkles, Handshake, Users, CalendarDays, MapPin, UtensilsCrossed, Flower2, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Sparkles, Handshake, Users, CalendarDays, MapPin, UtensilsCrossed, Flower2, CheckCircle2, Scale } from 'lucide-react';
 import { getEvent, updateEvent } from '../lib/firestore';
 import type { Event } from '../types';
 
@@ -15,6 +17,16 @@ export default function EventDetailPage() {
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [activating, setActivating] = useState(false);
+
+  // Actual waste recording state
+  const [showRecordModal, setShowRecordModal] = useState(false);
+  const [actualFoodKg, setActualFoodKg] = useState('');
+  const [actualPlasticKg, setActualPlasticKg] = useState('');
+  const [actualPaperKg, setActualPaperKg] = useState('');
+  const [actualFlowerKg, setActualFlowerKg] = useState('');
+  const [actualTotalKg, setActualTotalKg] = useState('');
+  const [recordLoading, setRecordLoading] = useState(false);
+  const [recordSuccess, setRecordSuccess] = useState('');
 
   useEffect(() => {
     if (!id) return;
@@ -47,9 +59,47 @@ export default function EventDetailPage() {
     setActivating(true);
     try {
       await updateEvent(event.id, { status: 'ACTIVE' });
-    } catch { /* local-only event — update state anyway */ }
+    } catch { /* local fallback */ }
     setEvent(prev => prev ? { ...prev, status: 'ACTIVE' } : prev);
     setActivating(false);
+  }
+
+  async function handleRecordActualWaste(e: React.FormEvent) {
+    e.preventDefault();
+    if (!event?.id || !actualTotalKg) return;
+    setRecordLoading(true);
+
+    const food = parseFloat(actualFoodKg) || 0;
+    const plastic = parseFloat(actualPlasticKg) || 0;
+    const paper = parseFloat(actualPaperKg) || 0;
+    const flower = parseFloat(actualFlowerKg) || 0;
+    const total = parseFloat(actualTotalKg) || (food + plastic + paper + flower);
+
+    const actualWasteData = {
+      foodWasteKg: food,
+      plasticWasteKg: plastic,
+      paperWasteKg: paper,
+      flowerWasteKg: flower,
+      totalWasteKg: total,
+      recordedAt: new Date().toISOString()
+    };
+
+    try {
+      await updateEvent(event.id, {
+        status: 'COMPLETED',
+        actualWaste: actualWasteData as any
+      });
+    } catch { /* ignore */ }
+
+    setEvent(prev => prev ? {
+      ...prev,
+      status: 'COMPLETED',
+      actualWaste: actualWasteData as any
+    } : prev);
+
+    setRecordLoading(false);
+    setShowRecordModal(false);
+    setRecordSuccess('Actual waste outcomes recorded successfully. ML feedback loop updated.');
   }
 
   if (loading) return (
@@ -99,6 +149,12 @@ export default function EventDetailPage() {
           <StatusBadge status={event.status} />
         </div>
 
+        {recordSuccess && (
+          <div className="mb-4">
+            <Alert type="success">{recordSuccess}</Alert>
+          </div>
+        )}
+
         {/* Overview */}
         <Card className="mb-5">
           <h2 className="text-h4 mb-4">Event Overview</h2>
@@ -116,7 +172,38 @@ export default function EventDetailPage() {
               <Button size="sm" onClick={handleActivate} loading={activating} icon={<CheckCircle2 size={14} />}>Activate Event</Button>
             </div>
           )}
+          {event.status === 'ACTIVE' && !showRecordModal && (
+            <div className="mt-5 pt-4 border-t border-border-subtle flex items-center justify-between gap-3 flex-wrap">
+              <p className="text-body-sm text-text-muted">Event is active. Record actual waste generation after completion.</p>
+              <Button size="sm" onClick={() => setShowRecordModal(true)} icon={<Scale size={14} />}>Record Actual Waste</Button>
+            </div>
+          )}
         </Card>
+
+        {/* Record Actual Waste Form */}
+        {showRecordModal && (
+          <Card className="mb-5 border-2 border-brand-primary">
+            <h3 className="text-h4 mb-3 flex items-center gap-2">
+              <Scale size={18} className="text-brand-primary" /> Record Actual Waste Generated (Post-Event Outcome)
+            </h3>
+            <p className="text-body-sm text-text-muted mb-4">
+              Recording actual waste collected allows EcoSetu to track prediction accuracy and continuously retrain ML models.
+            </p>
+            <form onSubmit={handleRecordActualWaste} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <Input label="Actual Food Waste (kg)" type="number" step="0.1" placeholder="e.g. 180" value={actualFoodKg} onChange={e => setActualFoodKg(e.target.value)} />
+                <Input label="Actual Plastic Waste (kg)" type="number" step="0.1" placeholder="e.g. 45" value={actualPlasticKg} onChange={e => setActualPlasticKg(e.target.value)} />
+                <Input label="Actual Paper Waste (kg)" type="number" step="0.1" placeholder="e.g. 30" value={actualPaperKg} onChange={e => setActualPaperKg(e.target.value)} />
+                <Input label="Actual Flower Waste (kg)" type="number" step="0.1" placeholder="e.g. 60" value={actualFlowerKg} onChange={e => setActualFlowerKg(e.target.value)} />
+              </div>
+              <Input label="Total Actual Waste (kg)" required type="number" step="0.1" placeholder="e.g. 315" value={actualTotalKg} onChange={e => setActualTotalKg(e.target.value)} />
+              <div className="flex gap-3 pt-2">
+                <Button type="button" variant="outline" onClick={() => setShowRecordModal(false)}>Cancel</Button>
+                <Button type="submit" loading={recordLoading} icon={<CheckCircle2 size={14} />}>Save Actual Outcomes</Button>
+              </div>
+            </form>
+          </Card>
+        )}
 
         {/* Command center actions */}
         <div className="grid sm:grid-cols-2 gap-5">

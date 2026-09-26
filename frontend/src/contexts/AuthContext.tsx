@@ -6,6 +6,7 @@ import {
 } from 'firebase/auth';
 import { auth, googleProvider } from '../lib/firebase';
 import { createUserProfile, getUserProfile, setUserRole } from '../lib/firestore';
+import { ENV } from '../config/environment';
 import type { UserProfile } from '../types';
 
 interface AuthContextValue {
@@ -23,7 +24,6 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-/** Resolves with value or null after timeoutMs — never hangs the app */
 function withTimeout<T>(promise: Promise<T>, timeoutMs = 5000): Promise<T | null> {
   return Promise.race([
     promise.catch(() => null),
@@ -32,6 +32,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs = 5000): Promise<T | null
 }
 
 function getStoredDemoData() {
+  if (!ENV.ENABLE_DEMO_MODE) return null;
   try {
     const raw = localStorage.getItem('uc_demo_user');
     if (raw) return JSON.parse(raw);
@@ -45,11 +46,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if demo user is active in localStorage
-    const storedDemo = getStoredDemoData();
-    if (storedDemo?.user && storedDemo?.profile) {
-      setCurrentUser(storedDemo.user);
-      setUserProfile(storedDemo.profile);
+    // Check if demo user is active in localStorage (development only)
+    if (ENV.ENABLE_DEMO_MODE) {
+      const storedDemo = getStoredDemoData();
+      if (storedDemo?.user && storedDemo?.profile) {
+        setCurrentUser(storedDemo.user);
+        setUserProfile(storedDemo.profile);
+      }
     }
 
     if (!auth) {
@@ -62,13 +65,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       unsub = onAuthStateChanged(auth, async (user) => {
         if (user) {
           setCurrentUser(user);
-          // Clear demo user if real Firebase user logs in
+          // Get ID Token & store for backend auth headers
+          try {
+            const token = await user.getIdToken();
+            localStorage.setItem('ecosetu_auth_token', `Bearer ${token}`);
+          } catch { /* ignore */ }
           try { localStorage.removeItem('uc_demo_user'); } catch { /* ignore */ }
           const profile = await withTimeout(getUserProfile(user.uid));
           setUserProfile(profile);
         } else if (!getStoredDemoData()) {
           setCurrentUser(null);
           setUserProfile(null);
+          localStorage.removeItem('ecosetu_auth_token');
         }
         setLoading(false);
       });
@@ -85,6 +93,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   async function signInAsDemoUser(name = 'Demo Event Organizer', email = 'organizer@ecosetu.ai') {
+    if (!ENV.ENABLE_DEMO_MODE) {
+      throw new Error('Demo authentication mode is disabled in production environments.');
+    }
     const demoUser: any = {
       uid: 'demo_organizer_123',
       email,
@@ -102,6 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     setCurrentUser(demoUser);
     setUserProfile(demoProfile);
+    localStorage.setItem('ecosetu_auth_token', 'Bearer demo_token_organizer');
     try {
       localStorage.setItem('uc_demo_user', JSON.stringify({ user: demoUser, profile: demoProfile }));
     } catch { /* ignore */ }
@@ -109,15 +121,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function signInWithGoogle() {
     if (!auth) {
-      await signInAsDemoUser();
-      return;
+      if (ENV.ENABLE_DEMO_MODE) {
+        await signInAsDemoUser();
+        return;
+      }
+      throw new Error('Firebase Authentication service is not initialized.');
     }
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
-      try {
-        localStorage.removeItem('uc_demo_user');
-      } catch { /* ignore */ }
+      const token = await user.getIdToken();
+      localStorage.setItem('ecosetu_auth_token', `Bearer ${token}`);
+      try { localStorage.removeItem('uc_demo_user'); } catch { /* ignore */ }
       try {
         await createUserProfile({
           uid: user.uid,
@@ -132,18 +147,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Non-fatal
       }
     } catch (err: any) {
-      const isDomainOrConfigError =
-        err?.code === 'auth/unauthorized-domain' ||
-        err?.code === 'auth/operation-not-allowed' ||
-        err?.code === 'auth/unauthorized-origin' ||
-        err?.code === 'auth/internal-error' ||
-        err?.code === 'auth/popup-blocked' ||
-        !err?.code;
+      if (ENV.ENABLE_DEMO_MODE) {
+        const isDomainOrConfigError =
+          err?.code === 'auth/unauthorized-domain' ||
+          err?.code === 'auth/operation-not-allowed' ||
+          err?.code === 'auth/unauthorized-origin' ||
+          err?.code === 'auth/internal-error' ||
+          err?.code === 'auth/popup-blocked' ||
+          !err?.code;
 
-      if (isDomainOrConfigError) {
-        console.warn('Google Auth domain/config restriction detected. Activating Demo Session fallback.', err);
-        await signInAsDemoUser('Demo Event Organizer', 'organizer@ecosetu.ai');
-        return;
+        if (isDomainOrConfigError) {
+          console.warn('Google Auth domain/config restriction detected. Activating Demo Session fallback in dev mode.', err);
+          await signInAsDemoUser('Demo Event Organizer', 'organizer@ecosetu.ai');
+          return;
+        }
       }
       throw err;
     }
@@ -151,14 +168,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function signInWithEmail(email: string, password: string) {
     if (!auth) {
-      await signInAsDemoUser('Demo User', email);
-      return;
+      if (ENV.ENABLE_DEMO_MODE) {
+        await signInAsDemoUser('Demo User', email);
+        return;
+      }
+      throw new Error('Firebase Authentication service is not initialized.');
     }
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      const token = await result.user.getIdToken();
+      localStorage.setItem('ecosetu_auth_token', `Bearer ${token}`);
       try { localStorage.removeItem('uc_demo_user'); } catch { /* ignore */ }
     } catch (err: any) {
-      if (err?.code === 'auth/unauthorized-domain' || err?.code === 'auth/operation-not-allowed') {
+      if (ENV.ENABLE_DEMO_MODE && (err?.code === 'auth/unauthorized-domain' || err?.code === 'auth/operation-not-allowed')) {
         await signInAsDemoUser('Demo User', email);
         return;
       }
@@ -168,12 +190,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function signUpWithEmail(email: string, password: string, name: string) {
     if (!auth) {
-      await signInAsDemoUser(name, email);
-      return;
+      if (ENV.ENABLE_DEMO_MODE) {
+        await signInAsDemoUser(name, email);
+        return;
+      }
+      throw new Error('Firebase Authentication service is not initialized.');
     }
     try {
       const result = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(result.user, { displayName: name });
+      const token = await result.user.getIdToken();
+      localStorage.setItem('ecosetu_auth_token', `Bearer ${token}`);
       try { localStorage.removeItem('uc_demo_user'); } catch { /* ignore */ }
       try {
         await createUserProfile({
@@ -189,7 +216,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Non-fatal
       }
     } catch (err: any) {
-      if (err?.code === 'auth/unauthorized-domain' || err?.code === 'auth/operation-not-allowed') {
+      if (ENV.ENABLE_DEMO_MODE && (err?.code === 'auth/unauthorized-domain' || err?.code === 'auth/operation-not-allowed')) {
         await signInAsDemoUser(name, email);
         return;
       }
@@ -212,15 +239,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
-    const stored = getStoredDemoData();
-    if (stored) {
-      stored.profile.role = role;
-      try { localStorage.setItem('uc_demo_user', JSON.stringify(stored)); } catch { /* ignore */ }
+    if (ENV.ENABLE_DEMO_MODE) {
+      const stored = getStoredDemoData();
+      if (stored) {
+        stored.profile.role = role;
+        try { localStorage.setItem('uc_demo_user', JSON.stringify(stored)); } catch { /* ignore */ }
+      }
     }
   }
 
   async function logout() {
     try { localStorage.removeItem('uc_demo_user'); } catch { /* ignore */ }
+    localStorage.removeItem('ecosetu_auth_token');
     if (auth) {
       try { await signOut(auth); } catch { /* ignore */ }
     }

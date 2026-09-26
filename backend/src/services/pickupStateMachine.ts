@@ -46,7 +46,8 @@ const validTransitions: Record<PickupStatus, PickupStatus[]> = {
   CANCELLED: []
 };
 
-export function isValidTransition(from: PickupStatus, to: PickupStatus): boolean {
+export function isValidTransition(from: PickupStatus | null, to: PickupStatus): boolean {
+  if (!from) return to === 'PENDING';
   const allowed = validTransitions[from];
   return allowed ? allowed.includes(to) : false;
 }
@@ -57,39 +58,32 @@ export function transitionPickupStatus(
   userId: string,
   reason?: string
 ): PickupStateRecord {
-  const current = pickupStateStore.get(pickupId) || {
-    pickupId,
-    eventId: 'evt_sample_123',
-    partnerId: 'partner_vjw_01',
-    currentStatus: 'PENDING',
-    updatedAt: new Date().toISOString(),
-    updatedBy: userId,
-    version: 1
-  };
+  const existing = pickupStateStore.get(pickupId);
+  const currentStatus = existing ? existing.currentStatus : null;
 
-  if (!isValidTransition(current.currentStatus, targetStatus)) {
+  if (!isValidTransition(currentStatus, targetStatus)) {
     throw new Error(
-      `Invalid state transition from '${current.currentStatus}' to '${targetStatus}'. Allowed target states: [${(validTransitions[current.currentStatus] || []).join(', ')}]`
+      `Invalid state transition from '${currentStatus || 'NONE'}' to '${targetStatus}'. Allowed target states: [${currentStatus ? (validTransitions[currentStatus] || []).join(', ') : 'PENDING'}]`
     );
   }
 
-  const previousStatus = current.currentStatus;
   const updatedRecord: PickupStateRecord = {
-    ...current,
-    previousStatus,
+    pickupId,
+    eventId: existing?.eventId || 'evt_sample',
+    partnerId: existing?.partnerId || 'partner_sample',
+    previousStatus: existing ? existing.currentStatus : undefined,
     currentStatus: targetStatus,
     updatedAt: new Date().toISOString(),
     updatedBy: userId,
     transitionReason: reason || 'Status update via state machine',
-    version: current.version + 1
+    version: existing ? existing.version + 1 : 1
   };
 
   pickupStateStore.set(pickupId, updatedRecord);
 
-  // Write immutable event audit entry to pickup_events collection
   const auditEvent: PickupEventAudit = {
     pickupId,
-    from: previousStatus,
+    from: existing ? existing.currentStatus : 'PENDING',
     to: targetStatus,
     changedBy: userId,
     timestamp: new Date().toISOString(),
@@ -97,14 +91,13 @@ export function transitionPickupStatus(
   };
   pickupEventsAuditStore.push(auditEvent);
 
-  // Record in global security audit log
   recordAuditLog({
     actorId: userId,
     actorRole: 'RECOVERY_PARTNER',
     action: `PICKUP_TRANSITION_${targetStatus}`,
     resourceType: 'PICKUP',
     resourceId: pickupId,
-    metadata: { from: previousStatus, to: targetStatus, reason }
+    metadata: { from: existing ? existing.currentStatus : null, to: targetStatus, reason }
   });
 
   return updatedRecord;

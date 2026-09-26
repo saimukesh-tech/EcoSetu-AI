@@ -15,6 +15,7 @@ import impactRoutesV1 from './routes/v1/impact.routes';
 import chatRoutesV1 from './routes/v1/chat.routes';
 import analyticsRoutesV1 from './routes/v1/analytics.routes';
 import healthRoutesV1 from './routes/v1/health.routes';
+import notificationRoutesV1 from './routes/v1/notification.routes';
 
 dotenv.config();
 
@@ -22,11 +23,11 @@ const app: Express = express();
 
 // Security Headers (OWASP Security Standard)
 app.use(helmet({
-  contentSecurityPolicy: false, // Managed by CDN / Frontend
+  contentSecurityPolicy: false,
   crossOriginResourcePolicy: { policy: 'cross-origin' }
 }));
 
-// Strict CORS Origin Enforcement (Reject any unknown origin)
+// Strict CORS Origin Enforcement
 const allowedOrigins = [
   process.env.FRONTEND_URL,
   'http://localhost:5173',
@@ -38,7 +39,6 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow non-browser requests (Postman, curl, server-to-server) or exact whitelisted origins
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -50,11 +50,9 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID', 'Idempotency-Key']
 }));
 
-// Scoped body payload size limits
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-// Attach Request ID and Structured Logging
 app.use(requestIdMiddleware);
 app.use(structuredLogger);
 app.use(generalApiRateLimiter);
@@ -69,6 +67,7 @@ app.use('/api/v1/pickup', pickupRoutesV1);
 app.use('/api/v1/impact', impactRoutesV1);
 app.use('/api/v1/chat', chatRoutesV1);
 app.use('/api/v1/analytics', analyticsRoutesV1);
+app.use('/api/v1/notifications', notificationRoutesV1);
 
 // Backward compatibility router with Deprecation Notice Header
 const deprecationMiddleware = (req: Request, res: Response, next: NextFunction) => {
@@ -82,8 +81,8 @@ app.use('/api/pickup', deprecationMiddleware, pickupRoutesV1);
 app.use('/api/impact', deprecationMiddleware, impactRoutesV1);
 app.use('/api/chat', deprecationMiddleware, chatRoutesV1);
 app.use('/api/analytics', deprecationMiddleware, analyticsRoutesV1);
+app.use('/api/notifications', deprecationMiddleware, notificationRoutesV1);
 
-// 404 Route Handler
 app.use((req: Request, res: Response) => {
   res.status(404).json({
     success: false,
@@ -94,7 +93,6 @@ app.use((req: Request, res: Response) => {
   });
 });
 
-// Centralized Error Handling
 app.use(errorHandler);
 
 export default app;

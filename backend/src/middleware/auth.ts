@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { AuthError, ForbiddenError } from '../errors/AppError';
 import { RequestWithId } from './requestId';
+import { ENV } from '../config/environment';
 
 export interface UserPayload {
   uid: string;
@@ -14,7 +15,6 @@ export interface AuthenticatedRequest extends RequestWithId {
   user?: UserPayload;
 }
 
-// Verified user metadata resolver map
 const verifiedUserRolesStore: Record<string, { role: 'ORGANIZER' | 'RECOVERY_PARTNER' | 'ADMIN'; organizationId: string; name: string }> = {
   'demo_organizer_123': { role: 'ORGANIZER', organizationId: 'org_demo_1', name: 'Demo Event Organizer' },
   'demo_partner_456': { role: 'RECOVERY_PARTNER', organizationId: 'org_demo_2', name: 'Demo Recovery Partner' },
@@ -28,7 +28,15 @@ function getFirebaseAdminInstance() {
     try {
       const admin = require('firebase-admin');
       if (admin.apps.length === 0) {
-        if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+        if (ENV.FIREBASE_PROJECT_ID && ENV.FIREBASE_CLIENT_EMAIL && ENV.FIREBASE_PRIVATE_KEY) {
+          admin.initializeApp({
+            credential: admin.credential.cert({
+              projectId: ENV.FIREBASE_PROJECT_ID,
+              clientEmail: ENV.FIREBASE_CLIENT_EMAIL,
+              privateKey: ENV.FIREBASE_PRIVATE_KEY
+            })
+          });
+        } else if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
           const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
           admin.initializeApp({
             credential: admin.credential.cert(serviceAccount)
@@ -49,9 +57,8 @@ export async function authenticateUser(req: AuthenticatedRequest, res: Response,
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    // Check if demo authentication is explicitly enabled for non-production environments
-    const isDemoEnabled = process.env.NODE_ENV !== 'production' && process.env.ENABLE_DEMO_AUTH === 'true';
-    if (isDemoEnabled) {
+    // Demo mode strictly restricted to non-production environments with explicit ENABLE_DEMO_AUTH=true flag
+    if (ENV.ENABLE_DEMO_AUTH) {
       req.user = {
         uid: 'demo_organizer_123',
         email: 'organizer@ecosetu.ai',
@@ -67,9 +74,8 @@ export async function authenticateUser(req: AuthenticatedRequest, res: Response,
 
   const token = authHeader.split('Bearer ')[1].trim();
 
-  // Allow explicit demo tokens strictly in non-production environments
-  const isDemoAllowed = process.env.NODE_ENV !== 'production' && process.env.ENABLE_DEMO_AUTH === 'true';
-  if (isDemoAllowed) {
+  // Allow explicit demo tokens strictly in non-production environments with explicit ENABLE_DEMO_AUTH=true flag
+  if (ENV.ENABLE_DEMO_AUTH) {
     if (token === 'demo_token_organizer' || token.startsWith('demo_organizer')) {
       req.user = {
         uid: 'demo_organizer_123',
@@ -108,7 +114,6 @@ export async function authenticateUser(req: AuthenticatedRequest, res: Response,
     if (admin && admin.apps.length > 0) {
       const decodedToken = await admin.auth().verifyIdToken(token, true); // true = checkRevoked
       
-      // Resolve role & organizationId from verified custom claims or database store (never client headers)
       const userMeta = verifiedUserRolesStore[decodedToken.uid] || {
         role: (decodedToken.role as any) || 'ORGANIZER',
         organizationId: (decodedToken.organizationId as any) || `org_${decodedToken.uid}`,
@@ -145,7 +150,6 @@ export function requireRole(allowedRoles: Array<'ORGANIZER' | 'RECOVERY_PARTNER'
   };
 }
 
-// Resource Ownership & Multi-tenant Organization Isolation Middleware
 export function authorizeResourceAccess(options: {
   getResourceOwnerId?: (req: AuthenticatedRequest) => string | undefined;
   getResourceOrgId?: (req: AuthenticatedRequest) => string | undefined;
@@ -155,12 +159,10 @@ export function authorizeResourceAccess(options: {
       return next(new AuthError());
     }
 
-    // Admins bypass resource & tenant checks
     if (req.user.role === 'ADMIN') {
       return next();
     }
 
-    // 1. Organization / Tenant Isolation Check
     if (options.getResourceOrgId) {
       const resourceOrgId = options.getResourceOrgId(req);
       if (resourceOrgId && resourceOrgId !== req.user.organizationId) {
@@ -168,7 +170,6 @@ export function authorizeResourceAccess(options: {
       }
     }
 
-    // 2. Resource Owner Check
     if (options.getResourceOwnerId) {
       const ownerId = options.getResourceOwnerId(req);
       if (ownerId && ownerId !== req.user.uid) {

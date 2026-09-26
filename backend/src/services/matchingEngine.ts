@@ -9,10 +9,11 @@ export interface PartnerProfile {
   longitude: number;
   serviceRadiusKm: number;
   isAvailable: boolean;
-  verificationStatus: 'VERIFIED' | 'PENDING_VERIFICATION' | 'UNDER_REVIEW' | 'SUSPENDED';
+  verificationStatus: 'VERIFIED' | 'PENDING_VERIFICATION' | 'UNDER_REVIEW' | 'REJECTED' | 'SUSPENDED';
   rating: number;
   contactEmail: string;
   contactPhone: string;
+  registeredAt?: string;
 }
 
 export interface MatchRequest {
@@ -34,8 +35,7 @@ export interface RecommendedMatch {
   partner: PartnerProfile;
 }
 
-// Sample Verified Recovery Partners with geospatial coordinates
-const samplePartners: PartnerProfile[] = [
+const partnerRegistryStore: PartnerProfile[] = [
   {
     id: 'partner_vjw_01',
     name: 'Vijayawada EcoRecycle Unit',
@@ -86,9 +86,63 @@ const samplePartners: PartnerProfile[] = [
   }
 ];
 
-// Haversine Formula for exact spherical distance calculation in kilometers
+export function registerPartner(uid: string, data: any): PartnerProfile {
+  const existing = partnerRegistryStore.find(p => p.id === uid);
+  if (existing) {
+    Object.assign(existing, {
+      name: data.orgName,
+      acceptedWasteTypes: data.acceptedWasteTypes,
+      capacityKg: data.processingCapacityKg,
+      availableCapacityKg: data.processingCapacityKg,
+      location: data.location,
+      latitude: data.latitude || 16.5062,
+      longitude: data.longitude || 80.6480,
+      serviceRadiusKm: data.serviceRadiusKm || 50,
+      contactEmail: data.contactEmail,
+      contactPhone: data.contactPhone,
+      verificationStatus: 'PENDING_VERIFICATION'
+    });
+    return existing;
+  }
+
+  const newPartner: PartnerProfile = {
+    id: uid,
+    name: data.orgName,
+    acceptedWasteTypes: data.acceptedWasteTypes,
+    capacityKg: data.processingCapacityKg,
+    availableCapacityKg: data.processingCapacityKg,
+    location: data.location,
+    latitude: data.latitude || 16.5062,
+    longitude: data.longitude || 80.6480,
+    serviceRadiusKm: data.serviceRadiusKm || 50,
+    isAvailable: true,
+    verificationStatus: 'PENDING_VERIFICATION',
+    rating: 5.0,
+    contactEmail: data.contactEmail,
+    contactPhone: data.contactPhone,
+    registeredAt: new Date().toISOString()
+  };
+
+  partnerRegistryStore.push(newPartner);
+  return newPartner;
+}
+
+export function verifyPartner(partnerId: string, status: 'VERIFIED' | 'REJECTED' | 'SUSPENDED' | 'PENDING_VERIFICATION'): PartnerProfile | null {
+  const partner = partnerRegistryStore.find(p => p.id === partnerId);
+  if (!partner) return null;
+  partner.verificationStatus = status;
+  return partner;
+}
+
+export function getRegisteredPartners(onlyVerified = false): PartnerProfile[] {
+  if (onlyVerified) {
+    return partnerRegistryStore.filter(p => p.verificationStatus === 'VERIFIED');
+  }
+  return partnerRegistryStore;
+}
+
 export function calculateHaversineDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371; // Earth radius in km
+  const R = 6371;
   const dLat = (lat2 - lat1) * (Math.PI / 180);
   const dLon = (lon2 - lon1) * (Math.PI / 180);
   const a =
@@ -100,14 +154,16 @@ export function calculateHaversineDistanceKm(lat1: number, lon1: number, lat2: n
 }
 
 export function recommendPartners(req: MatchRequest): RecommendedMatch[] {
-  // Default coordinates to Vijayawada center if not provided
   const eventLat = req.latitude ?? 16.5062;
   const eventLon = req.longitude ?? 80.6480;
   const maxRadiusKm = req.serviceRadiusKm ?? 50;
 
   const matches: RecommendedMatch[] = [];
 
-  for (const partner of samplePartners) {
+  // Filter only VERIFIED partners for recommendation engine
+  const candidatePartners = partnerRegistryStore.filter(p => p.verificationStatus === 'VERIFIED' && p.isAvailable);
+
+  for (const partner of candidatePartners) {
     let score = 0;
     const reasons: string[] = [];
 
@@ -169,6 +225,5 @@ export function recommendPartners(req: MatchRequest): RecommendedMatch[] {
     }
   }
 
-  // Sort by highest match score descending
   return matches.sort((a, b) => b.matchScore - a.matchScore);
 }

@@ -24,6 +24,14 @@ export interface Event {
   organizerUid: string;
   status: 'DRAFT' | 'ACTIVE' | 'COMPLETED';
   wastePredictionId?: string;
+  actualWaste?: {
+    foodWasteKg: number;
+    plasticWasteKg: number;
+    paperWasteKg: number;
+    flowerWasteKg: number;
+    totalWasteKg: number;
+    recordedAt: string;
+  };
   createdAt: any;
   updatedAt: any;
 }

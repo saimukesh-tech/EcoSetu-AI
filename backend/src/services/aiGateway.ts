@@ -1,4 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { retrieveRelevantKnowledge } from './sustainabilityRAG';
+import { ENV } from '../config/environment';
 
 export interface AIGatewayRequest {
   message: string;
@@ -9,6 +11,7 @@ export interface AIGatewayRequest {
 
 export interface AIGatewayResponse {
   reply: string;
+  groundedKnowledge: Array<{ id: string; title: string }>;
   telemetry: {
     model: string;
     promptVersion: string;
@@ -18,7 +21,6 @@ export interface AIGatewayResponse {
   };
 }
 
-// Prompt Injection Detection patterns (OWASP AISVS Compliance)
 const PROMPT_INJECTION_PATTERNS = [
   /ignore (all )?previous instructions/i,
   /disregard (the )?above/i,
@@ -34,7 +36,7 @@ export function detectPromptInjection(input: string): boolean {
 
 export async function processAIChatRequest(req: AIGatewayRequest): Promise<AIGatewayResponse> {
   const start = Date.now();
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = ENV.GEMINI_API_KEY;
 
   // 1. Prompt Injection Security Check
   if (detectPromptInjection(req.message)) {
@@ -47,10 +49,11 @@ export async function processAIChatRequest(req: AIGatewayRequest): Promise<AIGat
     }));
 
     return {
-      reply: 'I am designed specifically to assist with event waste segregation, composting, and eco-friendly event planning. Please ask a query related to sustainability!',
+      reply: 'I am designed specifically to assist with event waste segregation, composting, circular recovery, and eco-friendly event planning. Please ask a query related to sustainability!',
+      groundedKnowledge: [],
       telemetry: {
         model: 'gemini-1.5-flash',
-        promptVersion: 'waste-assistant-v2',
+        promptVersion: 'ecosetu-rag-v2',
         latencyMs: Date.now() - start,
         fallbackUsed: true,
         promptInjectionDetected: true
@@ -58,13 +61,22 @@ export async function processAIChatRequest(req: AIGatewayRequest): Promise<AIGat
     };
   }
 
-  // 2. Fallback execution if Gemini API key is missing or invalid
+  // 2. Retrieve Grounded RAG Knowledge Chunks
+  const ragChunks = retrieveRelevantKnowledge(req.message, 3);
+  const ragContextText = ragChunks.length > 0
+    ? ragChunks.map(c => `[Knowledge Base: ${c.title}]\n${c.content}`).join('\n\n')
+    : 'No specific local RAG document matched; apply standard EcoSetu zero-waste principles.';
+
+  const groundedMeta = ragChunks.map(c => ({ id: c.id, title: c.title }));
+
+  // 3. Fallback execution if Gemini API key is missing or default key
   if (!apiKey || apiKey === 'your_gemini_api_key' || apiKey === 'demo_key') {
     return {
-      reply: generateStructuredSustainabilityAdvice(req.message, req.context),
+      reply: generateStructuredSustainabilityAdvice(req.message, ragChunks),
+      groundedKnowledge: groundedMeta,
       telemetry: {
-        model: 'ecosetu-advisory-heuristics-v1',
-        promptVersion: 'waste-assistant-v2',
+        model: 'ecosetu-rag-advisory-v2',
+        promptVersion: 'ecosetu-rag-v2',
         latencyMs: Date.now() - start,
         fallbackUsed: true,
         promptInjectionDetected: false
@@ -72,24 +84,34 @@ export async function processAIChatRequest(req: AIGatewayRequest): Promise<AIGat
     };
   }
 
-  // 3. Execute Gemini AI Call
+  // 4. Execute Grounded Gemini AI Call
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-    const systemInstruction = `You are EcoSetu AI Assistant, an expert in Indian event waste management, festival waste segregation, composting, bio-recycling, and zero-waste wedding planning.
-    Always provide actionable, concise, and structured sustainability recommendations.`;
+    const systemInstruction = `You are EcoSetu AI RAG Assistant, an expert in Indian event waste intelligence, festival waste segregation, composting, floral upcycling, and zero-waste logistics.
+Answer the user query strictly grounded in the verified RAG knowledge base context and platform telemetry provided below. If relevant EcoSetu platform data is present, incorporate it directly.`;
 
-    const prompt = `${systemInstruction}\n\nUser Context: ${JSON.stringify(req.context || {})}\nUser Query: ${req.message}`;
-    
+    const prompt = `${systemInstruction}
+
+=== VERIFIED GROUNDED RAG KNOWLEDGE ===
+${ragContextText}
+
+=== PLATFORM & USER CONTEXT ===
+${JSON.stringify(req.context || {}, null, 2)}
+
+=== USER QUERY ===
+${req.message}`;
+
     const result = await model.generateContent(prompt);
     const responseText = result.response.text();
 
     return {
       reply: responseText,
+      groundedKnowledge: groundedMeta,
       telemetry: {
         model: 'gemini-1.5-flash',
-        promptVersion: 'waste-assistant-v2',
+        promptVersion: 'ecosetu-rag-v2',
         latencyMs: Date.now() - start,
         fallbackUsed: false,
         promptInjectionDetected: false
@@ -102,12 +124,12 @@ export async function processAIChatRequest(req: AIGatewayRequest): Promise<AIGat
       error: error.message || error
     }));
 
-    // Controlled fallback
     return {
-      reply: generateStructuredSustainabilityAdvice(req.message, req.context),
+      reply: generateStructuredSustainabilityAdvice(req.message, ragChunks),
+      groundedKnowledge: groundedMeta,
       telemetry: {
-        model: 'ecosetu-advisory-heuristics-v1',
-        promptVersion: 'waste-assistant-v2',
+        model: 'ecosetu-rag-advisory-v2',
+        promptVersion: 'ecosetu-rag-v2',
         latencyMs: Date.now() - start,
         fallbackUsed: true,
         promptInjectionDetected: false
@@ -116,7 +138,12 @@ export async function processAIChatRequest(req: AIGatewayRequest): Promise<AIGat
   }
 }
 
-function generateStructuredSustainabilityAdvice(message: string, context?: Record<string, any>): string {
+function generateStructuredSustainabilityAdvice(message: string, ragChunks: any[]): string {
+  if (ragChunks.length > 0) {
+    const primary = ragChunks[0];
+    return `🌱 **EcoSetu Grounded Sustainability Advice (${primary.title})**\n\n${primary.content}\n\n♻️ **Recommended Action:** Segregate waste into labelled streams at the source and schedule a verified EcoSetu Recovery Partner.`;
+  }
+
   const query = message.toLowerCase();
 
   if (query.includes('food') || query.includes('catering') || query.includes('leftover')) {
@@ -131,13 +158,6 @@ function generateStructuredSustainabilityAdvice(message: string, context?: Recor
 1. **Segregation:** Keep marigold, rose, and green foliage unmixed from plastic wraps.
 2. **Floral Recyclers:** Send marigold and roses to incense stick & organic dye manufacturing units.
 3. **Composting:** Shred green foliage for rapid aerobic composting.`;
-  }
-
-  if (query.includes('plastic') || query.includes('bottle') || query.includes('cutlery')) {
-    return `♻️ **Plastic & Dry Waste Segregation:**
-1. **Banning Single-Use:** Replace disposable plastic bottles with refillable glass water dispensers.
-2. **Collection:** Set up dual-stream recycling stations at all exit points.
-3. **Recycler Dispatch:** Schedule bulk plastic pickup with registered plastic recycling aggregators.`;
   }
 
   return `♻️ **EcoSetu Event Sustainability Plan:**

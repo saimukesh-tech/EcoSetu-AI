@@ -1,0 +1,23 @@
+name: EcoSetu AI Security Audit
+
+on:
+  schedule:
+    - cron: '0 0 * * 1' # Run weekly on Mondays
+  workflow_dispatch:
+
+jobs:
+  security-audit:
+    name: Dependency Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+
+      - name: Frontend Audit
+        run: cd frontend && npm audit --audit-level=high || true
+
+      - name: Backend Audit
+        run: cd backend && npm audit --audit-level=high || true

@@ -5,16 +5,14 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { ToastProvider } from './components/feedback/Toast';
 
-// Landing is the most common first paint — keep it in the main bundle.
 import LandingPage from './pages/LandingPage';
 
-// Every other route is lazy-loaded so authenticated-app code doesn't
-// weigh down the public landing page's first load.
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const SignupPage = lazy(() => import('./pages/SignupPage'));
 const OnboardingPage = lazy(() => import('./pages/OnboardingPage'));
 const OrganizerDashboard = lazy(() => import('./pages/OrganizerDashboard'));
 const PartnerDashboard = lazy(() => import('./pages/PartnerDashboard'));
+const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'));
 const EventsPage = lazy(() => import('./pages/EventsPage'));
 const NewEventPage = lazy(() => import('./pages/NewEventPage'));
 const WastePredictionPage = lazy(() => import('./pages/WastePredictionPage'));
@@ -58,6 +56,9 @@ export default function App() {
           } />
           <Route path="/partner-dashboard" element={
             <ProtectedRoute><PartnerDashboard /></ProtectedRoute>
+          } />
+          <Route path="/admin" element={
+            <ProtectedRoute><AdminDashboardPage /></ProtectedRoute>
           } />
           <Route path="/events" element={
             <ProtectedRoute><EventsPage /></ProtectedRoute>
