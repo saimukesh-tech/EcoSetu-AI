@@ -93,21 +93,20 @@ export default function LandingPage() {
             </div>
             <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
               <div className="hidden lg:block"><ThemeToggle /></div>
-              <div className="hidden lg:flex items-center gap-2.5">
+              <div className="flex items-center gap-2.5">
                 {currentUser ? (
                   <Button onClick={() => navigate('/dashboard')} size="sm">Go to Dashboard</Button>
                 ) : (
                   <>
-                    <Link to="/login" className="text-body-sm text-text-secondary hover:text-brand-primary font-semibold transition-colors">Sign in</Link>
-                    <Button onClick={() => navigate('/signup')} size="sm">Start Your Event</Button>
+                    <Link to="/login" className="text-body-xs sm:text-body-sm text-text-primary hover:text-brand-primary font-semibold transition-colors px-2 py-1 border border-border-subtle rounded-md bg-surface">
+                      Sign In
+                    </Link>
+                    <Button onClick={() => navigate('/signup')} size="sm">
+                      <span className="hidden sm:inline">Start Your Event</span>
+                      <span className="sm:hidden">Sign Up</span>
+                    </Button>
                   </>
                 )}
-              </div>
-              <div className="lg:hidden">
-                <Button onClick={handleGetStarted} size="sm">
-                  <span className="hidden sm:inline">Start Your Event</span>
-                  <span className="sm:hidden">Start Free</span>
-                </Button>
               </div>
               <IconButton
                 icon={<Menu size={20} />}
