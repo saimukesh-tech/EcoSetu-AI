@@ -114,18 +114,22 @@ export async function authenticateUser(req: AuthenticatedRequest, res: Response,
     if (admin && admin.apps.length > 0) {
       const decodedToken = await admin.auth().verifyIdToken(token, true); // true = checkRevoked
       
-      const userMeta = verifiedUserRolesStore[decodedToken.uid] || {
-        role: (decodedToken.role as any) || 'ORGANIZER',
-        organizationId: (decodedToken.organizationId as any) || `org_${decodedToken.uid}`,
-        name: decodedToken.name || 'EcoSetu User'
-      };
+      const userMeta = verifiedUserRolesStore[decodedToken.uid];
+      const role = (decodedToken.role as any) || userMeta?.role;
+
+      if (!role) {
+        return next(new ForbiddenError('Forbidden. User profile role is unassigned. Please complete onboarding.'));
+      }
+
+      const organizationId = (decodedToken.organizationId as any) || userMeta?.organizationId || `org_${decodedToken.uid}`;
+      const name = decodedToken.name || userMeta?.name || 'EcoSetu User';
 
       req.user = {
         uid: decodedToken.uid,
         email: decodedToken.email || '',
-        role: userMeta.role,
-        name: userMeta.name,
-        organizationId: userMeta.organizationId
+        role,
+        name,
+        organizationId
       };
       return next();
     }

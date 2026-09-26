@@ -41,8 +41,14 @@ service cloud.firestore {
 
     // ── Recovery Partners ──────────────────────────────────────────────────
     match /recovery_partners/{partnerId} {
+      // Public partner discovery
       allow read: if isAuthenticated();
       allow write: if isOwner(partnerId) || isAdmin();
+      
+      // Private verification documents subcollection
+      match /private_documents/{docId} {
+        allow read, write: if isOwner(partnerId) || isAdmin();
+      }
     }
 
     // ── Pickup Requests ────────────────────────────────────────────────────
@@ -58,9 +64,11 @@ service cloud.firestore {
       );
     }
 
-    // ── Pickup Status History ──────────────────────────────────────────────
+    // ── Pickup Status History (Immutable Server/Authorized Operator Audit Trail) ──
     match /pickup_status_history/{histId} {
-      allow create: if isAuthenticated();
+      allow create: if isAuthenticated() && (
+        request.resource.data.changedBy == request.auth.uid || isAdmin()
+      );
       allow read: if isAuthenticated();
     }
 

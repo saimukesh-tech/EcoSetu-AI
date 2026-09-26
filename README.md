@@ -13,7 +13,7 @@
 
 **EcoSetu AI** is a full-stack sustainability platform designed for weddings, festivals, corporate events, and community gatherings. It integrates **Machine Learning waste forecasting**, **computer vision waste classification & detection**, **explainable SHAP-style attribution**, **Grounded Gemini + RAG AI advisory**, **verified partner matching**, **pickup state machine logistics**, and **EPA WARM v15 environmental impact analytics**.
 
-[Architecture Docs](docs/ARCHITECTURE.md) • [Datasets Guide](DATASETS.md) • [License](LICENSE)
+[Architecture Docs](docs/ARCHITECTURE.md) • [Impact Methodology](docs/IMPACT_METHODOLOGY.md) • [Threat Model](docs/THREAT_MODEL.md) • [Datasets Guide](DATASETS.md) • [License](LICENSE)
 
 </div>
 
@@ -21,21 +21,34 @@
 
 ## 📌 Implementation Status Matrix
 
-| Component / Feature | Implementation Status | Validation & Details |
+| Component / Feature | Implementation Status | Evidence & Validation Details |
 | :--- | :--- | :--- |
 | **Firebase Authentication** | 🟢 Implemented & Hardened | ID Token verification (`verifyIdToken`), environment-gated demo auth |
 | **Server-Side RBAC** | 🟢 Implemented | Express middleware enforcing `ORGANIZER`, `RECOVERY_PARTNER`, `ADMIN` roles |
-| **Firestore Security Rules** | 🟢 Implemented | Hardened `firestore.rules` checking owner & admin permissions across 10 collections |
+| **Firestore Security Rules** | 🟢 Implemented | Hardened [`firestore.rules`](firestore.rules) checking owner & admin permissions |
 | **Event Waste Prediction API** | 🟢 Implemented | Express $\rightarrow$ FastAPI ML microservice with domain heuristic fallback |
 | **Explainable ML Predictions** | 🟢 Implemented | Feature attribution rankings (% importance & $kg$ contributions) |
 | **Waste Photo Scanner** | 🟢 Implemented | Interactive UI connecting classification & object detection APIs |
 | **Gemini AI + RAG Assistant** | 🟢 Implemented | Grounded Gemini 1.5 Flash assistant with local RAG knowledge retriever |
 | **Partner Matching Engine** | 🟢 Implemented | Haversine distance ($R=6,371\text{ km}$), 5-factor scoring engine filtering `VERIFIED` partners |
 | **Pickup State Machine** | 🟢 Implemented | 7-stage lifecycle state machine with immutable status audit logs |
-| **EPA WARM Impact Engine** | 🟢 Implemented | EPA WARM v15 lifecycle metrics ($CO_2e$ avoided, meals rescued, trees, landfill volume) |
+| **EPA WARM Impact Engine** | 🟢 Implemented | EPA WARM v15 lifecycle metrics ([`docs/IMPACT_METHODOLOGY.md`](docs/IMPACT_METHODOLOGY.md)) |
 | **Actual Waste Feedback Loop** | 🟢 Implemented | Post-event outcome tracking, $\text{MAPE}$ error metrics, retraining dataset readiness |
 | **Admin Dashboard & Telemetry** | 🟢 Implemented | Admin route (`/admin`) for partner verification, model registry & telemetry |
-| **Automated Unit Tests & CI/CD** | 🟢 Implemented | Jest & Pytest test suites + GitHub Actions (`ci.yml` & `security.yml`) |
+| **Automated Unit Tests & CI/CD** | 🟢 Implemented | Jest & Pytest test suites + GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) |
+
+---
+
+## 📊 Evaluated Machine Learning Metrics & Evidence Links
+
+Every headline ML metric reported by EcoSetu AI is backed by an evaluation artifact stored in the repository:
+
+| Model Name | Task Type | Evaluated Metric | Benchmark Dataset / Split | Evaluation Artifact Link |
+| :--- | :--- | :--- | :--- | :--- |
+| **Event Waste Regressor** | Tabular Waste Forecast | $R^2 = 0.9238$, MAE = 1.67 kg | 1,782 Event Records Split | [`event_waste_model_v1_meta.json`](ml-service/app/models/event_waste_model_v1_meta.json) |
+| **Waste Image Classifier** | 8-Class Classification | Acc = 55.25%, Macro F1 = 0.5517 | Synthetic 400 Test Split | [`waste_classifier_v1_meta.json`](ml-service/app/models/waste_classifier_v1_meta.json) |
+| **RealWaste Landfill Benchmark** | Landfill Waste Classification | Acc = 16.46%, Weighted F1 = 0.1665 | 4,752 Australian Facility Images | [`realwaste_evaluation.json`](ml_reports/realwaste_evaluation.json) |
+| **Waste Object Detector** | Bounding Box Proposal | 6 Categories, 2,461 Polygons | TACO COCO Waste Split | [`waste_detector_v1_meta.json`](ml-service/app/models/waste_detector_v1_meta.json) |
 
 ---
 
@@ -67,31 +80,6 @@
               📈 EPA WARM v15 Environmental Impact Analytics
               (CO₂e Avoided, Meals Rescued, Landfill Volume Saved)
 ```
-
----
-
-## 🌟 Key Features
-
-### 1. 🤖 ML Waste Prediction & Computer Vision (`ml-service/`)
-- **Event Waste Forecasting:** Pre-trained **Random Forest Regressor** ($R^2 = 0.9238$, MAE = 1.67 kg) forecasting total, food, floral, plastic, paper, and fabric waste.
-- **Explainable Feature Attribution:** Every prediction includes feature importance rankings (Guest Count 65%, Duration 18%, Food Type 12%, Decor 5%).
-- **8-Class Waste Image Classifier:** Real-time waste category inference across 8 classes (*battery, glass, metal, organic_waste, paper_cardboard, plastic, textiles, trash*).
-- **Garbage Instance Detector:** COCO-trained bounding box proposal detector identifying 6 waste categories (*biowaste, glass, household waste, metal, paper/cardboard, plastic*).
-
-### 2. 🤖 Grounded Gemini 1.5 Flash + RAG Assistant (`backend/src/services/`)
-- Ingests local **sustainability RAG knowledge chunks** (FSSAI surplus food safety, marigold/rose upcycling, dual-stream plastic segregation, festival protocols, pickup logistics).
-- Grounded prompt injection eliminates hallucinations and incorporates live platform telemetry.
-
-### 3. ⚡ Express API Backend (`backend/`)
-- **Verified Partner Matching:** Multi-factor scoring algorithm (waste compatibility 35%, capacity 25%, Haversine proximity 20%, availability 10%, verification 10%) filtering strictly for verified partners.
-- **Strict Pickup State Machine:** Enforces valid status transitions (`PENDING` $\rightarrow$ `ACCEPTED` $\rightarrow$ `SCHEDULED` $\rightarrow$ `PICKUP_IN_PROGRESS` $\rightarrow$ `COLLECTED` $\rightarrow$ `RECOVERED` $\rightarrow$ `COMPLETED`).
-- **EPA WARM v15 Impact Engine:** Verifiable environmental metrics calculation ($1\text{ kg food diverted} = 0.3\text{ meals rescued}, 1\text{ kg plastic} = 1.5\text{ kg } CO_2e\text{ saved}$).
-- **Actual Waste Feedback Loop:** Calculates Mean Absolute Percentage Error ($\text{MAPE}$) when organizers log actual post-event outcomes.
-
-### 4. 🎨 Frontend Application (`frontend/`)
-- **React 19 & TypeScript:** Built with Vite and Tailwind CSS.
-- **Admin Dashboard (`/admin`):** Complete enterprise view for partner verification, model registry, live operational telemetry, and security audit logs.
-- **PWA Ready:** Mobile-installable with service worker offline caching.
 
 ---
 
@@ -139,59 +127,14 @@ EcoSetu-AI/
 │   │   └── main.py               # FastAPI App Engine & Startup Metadata Ingestion
 │   └── tests/                    # Pytest Suite
 ├── docs/                         # Documentation Suite
-│   └── ARCHITECTURE.md           # System Architecture & Topology
+│   ├── ARCHITECTURE.md           # System Architecture & Topology
+│   ├── IMPACT_METHODOLOGY.md     # EPA WARM Conversion Equations & Assumptions
+│   └── THREAT_MODEL.md           # Security Architecture & OWASP Controls
 ├── DATASETS.md                   # Dataset Attribution & Licenses
 ├── firestore.rules               # Root Firestore security rules
+├── LICENSE                       # MIT License
 ├── README.md                     # Master Repository Guide
 └── start_services.bat            # One-Click Automated Windows Launcher
-```
-
----
-
-## 🚀 Quickstart Guide
-
-### Prerequisites
-- **Node.js**: v20.0.0 or higher
-- **Python**: v3.11 or higher
-
----
-
-### Method A: One-Click Launcher (Windows)
-
-```cmd
-.\start_services.bat
-```
-*Automatically starts the FastAPI ML Service (Port 8000), Express Backend (Port 3001), and Vite Frontend (Port 5173).*
-
----
-
-### Method B: Manual Setup
-
-#### 1. Start ML Microservice (Python)
-```bash
-cd ml-service
-python -m venv venv
-# On Windows:
-.\venv\Scripts\activate
-# On Linux/macOS:
-# source venv/bin/activate
-
-pip install -r requirements.txt
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
-```
-
-#### 2. Start Express Backend (Node.js)
-```bash
-cd backend
-npm install
-npm run dev
-```
-
-#### 3. Start React Frontend (Vite)
-```bash
-cd frontend
-npm install
-npm run dev
 ```
 
 ---
@@ -214,4 +157,4 @@ pytest tests/
 
 ## 📄 License
 
-Distributed under the MIT License. See `LICENSE` for details.
+Distributed under the MIT License. See [`LICENSE`](LICENSE) for details.

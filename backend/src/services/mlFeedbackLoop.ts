@@ -4,7 +4,7 @@ export interface FeedbackOutcome {
   predictedWasteKg: number;
   actualWasteKg: number;
   absoluteErrorKg: number;
-  percentageErrorPct: number;
+  smapePct: number;
   recordedAt: string;
 }
 
@@ -12,7 +12,8 @@ const feedbackStore: FeedbackOutcome[] = [];
 
 export function recordOutcomeFeedback(eventId: string, predictedTotalKg: number, actualTotalKg: number): FeedbackOutcome {
   const absoluteError = Math.abs(predictedTotalKg - actualTotalKg);
-  const percentageError = actualTotalKg > 0 ? (absoluteError / actualTotalKg) * 100 : 0;
+  const denominator = (Math.abs(actualTotalKg) + Math.abs(predictedTotalKg)) / 2;
+  const smape = denominator > 0 ? (absoluteError / denominator) * 100 : 0;
 
   const outcome: FeedbackOutcome = {
     id: `fb_${Date.now()}`,
@@ -20,7 +21,7 @@ export function recordOutcomeFeedback(eventId: string, predictedTotalKg: number,
     predictedWasteKg: Math.round(predictedTotalKg * 100) / 100,
     actualWasteKg: Math.round(actualTotalKg * 100) / 100,
     absoluteErrorKg: Math.round(absoluteError * 100) / 100,
-    percentageErrorPct: Math.round(percentageError * 100) / 100,
+    smapePct: Math.round(smape * 100) / 100,
     recordedAt: new Date().toISOString()
   };
 
@@ -34,7 +35,7 @@ export function getFeedbackMetricsSummary() {
     return {
       totalOutcomesRecorded: 0,
       maeKg: 1.67, // Baseline ML report MAE
-      mapePct: 8.5,
+      smapePct: 8.5,
       sampleSize: 0,
       retrainingReady: false,
       recentOutcomes: []
@@ -42,15 +43,15 @@ export function getFeedbackMetricsSummary() {
   }
 
   const totalAbsError = feedbackStore.reduce((sum, o) => sum + o.absoluteErrorKg, 0);
-  const totalPctError = feedbackStore.reduce((sum, o) => sum + o.percentageErrorPct, 0);
+  const totalSmape = feedbackStore.reduce((sum, o) => sum + o.smapePct, 0);
 
   const mae = Math.round((totalAbsError / count) * 100) / 100;
-  const mape = Math.round((totalPctError / count) * 100) / 100;
+  const smape = Math.round((totalSmape / count) * 100) / 100;
 
   return {
     totalOutcomesRecorded: count,
     maeKg: mae,
-    mapePct: mape,
+    smapePct: smape,
     sampleSize: count,
     retrainingReady: count >= 10,
     recentOutcomes: feedbackStore.slice(-10).reverse()
